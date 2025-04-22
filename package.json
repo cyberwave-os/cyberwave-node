@@ -1,0 +1,19 @@
+{
+  "name": "cyberwave",
+  "version": "0.0.1",
+  "description": "Use CyberWave from your JS/TS project",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyberwave-os/cyberwave-sdk-typescript.git"
+  },
+  "author": "Vittorio \"ErLapso\" Banfi",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/cyberwave-os/cyberwave-sdk-typescript/issues"
+  },
+  "homepage": "https://github.com/cyberwave-os/cyberwave-sdk-typescript#readme"
+}
