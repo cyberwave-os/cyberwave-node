@@ -1,19 +1,26 @@
 {
   "name": "cyberwave",
   "version": "0.0.1",
-  "description": "Use CyberWave from your JS/TS project",
-  "main": "index.ts",
-  "scripts": {
+  "description": "The official Node CyberWave SDK",
+  "main": "index.ts",  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cyberwave-os/cyberwave-sdk-typescript.git"
+    "url": "git+https://github.com/cyberwave-os/cyberwave-node.git"
   },
-  "author": "Vittorio \"ErLapso\" Banfi",
+  "author": "Vittorio ErLapso Banfi",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/cyberwave-os/cyberwave-sdk-typescript/issues"
+    "url": "https://github.com/cyberwave-os/cyberwave-node/issues"
   },
-  "homepage": "https://github.com/cyberwave-os/cyberwave-sdk-typescript#readme"
+  "homepage": "https://github.com/cyberwave-os/cyberwave-node#readme",
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.11.0"
+  }
 }
