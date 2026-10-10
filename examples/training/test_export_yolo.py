@@ -22,6 +22,15 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(yolo_labels([], ["part"]), "")
         self.assertEqual(yolo_labels([{"label":"part","bbox":[0,0,1,1]}], ["part"]), "0 0.50000000 0.50000000 1.00000000 1.00000000\n")
 
+    def test_segmentation_requires_real_polygon_and_preserves_vertices(self):
+        polygon = [[0.1,0.2],[0.7,0.2],[0.4,0.8]]
+        labels = [{"label":"part", "bbox":[0.1,0.2,0.7,0.8], "polygon":polygon}]
+        self.assertEqual(yolo_labels(labels, ["part"], "segment"), "0 0.10000000 0.20000000 0.70000000 0.20000000 0.40000000 0.80000000\n")
+        self.assertEqual(yolo_labels([], ["part"], "segment"), "")
+        for points in (None, [[0,0],[1,1],[0.5,0.5]], [[0,0],[1,0],[2,1]]):
+            with self.assertRaises(ValueError):
+                yolo_labels([{**labels[0], "polygon":points}], ["part"], "segment")
+
     def test_export_keeps_provenance_and_never_sends_media_credentials(self):
         train, train_bytes = self.sample("red")
         val, val_bytes = self.sample("blue")

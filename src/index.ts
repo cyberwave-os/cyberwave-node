@@ -177,3 +177,7 @@ export function createCyberwave(options: ClientOptions = {}) {
   return { baseUrl, rest, environments, assets, missions, workflows, recordings, inspections, loadEnvironment };
 }
 export type CyberwaveClient = ReturnType<typeof createCyberwave>;
+
+export type StructuredActionCatalog = import('./generated/extensions.js').components['schemas']['StructuredActionCatalogSchema'];
+export type StructuredImageAction = StructuredActionCatalog['actions'][number];
+export type ImageAnnotationContract = NonNullable<StructuredImageAction['image_annotation']>;

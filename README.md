@@ -70,7 +70,7 @@ pnpm server
 pnpm dev
 ```
 
-Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **fourteen examples**, including [Cesium GIS planning](http://127.0.0.1:5173/), [mission simulation](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), [camera monitoring](http://127.0.0.1:5173/twin-monitor.html), and [human actions & reviewed evidence](http://127.0.0.1:5173/human-evidence.html).
+Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **fifteen examples**, including [Cesium GIS planning](http://127.0.0.1:5173/), [mission simulation](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), [camera monitoring](http://127.0.0.1:5173/twin-monitor.html), and [human actions & reviewed evidence](http://127.0.0.1:5173/human-evidence.html).
 
 New workbenches: [aerial inspection planning](http://127.0.0.1:5173/aerial-inspection.html), [campaign and evidence review](http://127.0.0.1:5173/inspection-workbench.html), and [recording catalog/playback](http://127.0.0.1:5173/recording-review.html).
 
@@ -234,3 +234,7 @@ The backend owns human-action authorization, deadlines, pause/resume and email d
 Media collections reuse Dataset and Attachment. Append is idempotent per collection/attachment, labels need an explicit review, and changed source bytes invalidate export. The platform's **Your actions** inbox handles consent and photo uploads; **Dataset → Samples** handles image and box review. The fourteenth example displays these same records through the SDK.
 
 The [training recipe](examples/training/README.md) exports approved images and labels with source hashes and reviewer provenance. Dispatch your training worker through existing HTTP Request / Run Workflow nodes. The built-in robotics training pipeline does not yet offer a YOLO adapter; no automatic model promotion is implied.
+
+### Capture and annotation (preview)
+
+[Example 15](http://127.0.0.1:5173/image-annotation.html) uses `@cyberwave/react/annotation`: Annotorious-backed rectangle/polygon editing, camera/video frame capture and canonical ML-result overlays. Task schemas and image coordinates come from the backend ML registry; provider parsing stays in its adapters. Reviewed polygons reuse Dataset samples, source hashes and revision checks, and the worker recipe can export YOLO segmentation labels. See the [component and integration guide](packages/react/ANNOTATION.md).

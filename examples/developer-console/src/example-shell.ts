@@ -1,7 +1,7 @@
 import "./example-shell.css";
 import { mountHeaderConnection } from "./header-connection.tsx";
 const groups = [
-  { name: "Human review & training", items: [["/human-evidence.html", "14 · Human actions & evidence"]] },
+  { name: "Human review & training", items: [["/human-evidence.html", "14 · Human actions & evidence"], ["/image-annotation.html", "15 · Capture & annotation"]] },
   {
     name: "SDK components",
     items: [

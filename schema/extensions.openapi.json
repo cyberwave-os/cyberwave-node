@@ -481,6 +481,26 @@
         ]
       }
     },
+    "/api/v1/mlmodels/structured-actions": {
+      "get": {
+        "operationId": "src_app_api_mlmodels_list_structured_actions",
+        "summary": "List Structured Actions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StructuredActionCatalogSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return the canonical catalog of playground ``structured_task`` values.\n\nServes as the machine-readable doc consumed by the Python SDK and the\nfrontend so everyone shares one source of truth for action ids, default\nprompts, and output schemas. See\n``src.lib.structured_actions`` for the authoring surface."
+      }
+    },
     "/api/v1/datasets/collections": {
       "post": {
         "operationId": "src_app_api_dataset_samples_create_sample_collection",
@@ -1839,6 +1859,40 @@
         "title": "WorkflowInputContractSchema",
         "type": "object"
       },
+      "StructuredActionCatalogSchema": {
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "semantics_version": {
+            "title": "Semantics Version",
+            "type": "integer"
+          },
+          "capability_tags": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Capability Tags",
+            "type": "object"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/StructuredImageActionSchema"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "semantics_version",
+          "capability_tags",
+          "actions"
+        ],
+        "title": "StructuredActionCatalogSchema",
+        "type": "object"
+      },
       "DatasetSchema": {
         "properties": {
           "workspace_uuid": {
@@ -2704,6 +2758,25 @@
             "minItems": 4,
             "title": "Bbox",
             "type": "array"
+          },
+          "polygon": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "maxItems": 128,
+                "minItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polygon"
           }
         },
         "required": [
@@ -2921,6 +2994,85 @@
           "source"
         ],
         "title": "WorkflowInputFieldSchema",
+        "type": "object"
+      },
+      "StructuredImageActionSchema": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "output_format": {
+            "title": "Output Format",
+            "type": "string"
+          },
+          "output_schema": {
+            "additionalProperties": true,
+            "title": "Output Schema",
+            "type": "object"
+          },
+          "output_semantics": {
+            "additionalProperties": true,
+            "title": "Output Semantics",
+            "type": "object"
+          },
+          "image_annotation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageAnnotationContractSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "default_prompt_template": {
+            "title": "Default Prompt Template",
+            "type": "string"
+          },
+          "per_model_prompt_templates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Per Model Prompt Templates",
+            "type": "object"
+          },
+          "requires_image": {
+            "title": "Requires Image",
+            "type": "boolean"
+          },
+          "capability_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Tag"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "description",
+          "output_format",
+          "output_schema",
+          "output_semantics",
+          "default_prompt_template",
+          "per_model_prompt_templates",
+          "requires_image"
+        ],
+        "title": "StructuredImageActionSchema",
         "type": "object"
       },
       "ProcessedDatasetSchema": {
@@ -3403,6 +3555,34 @@
           "method"
         ],
         "title": "InspectionMeasurementInput",
+        "type": "object"
+      },
+      "ImageAnnotationContractSchema": {
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "coordinate_scale": {
+            "title": "Coordinate Scale",
+            "type": "number"
+          },
+          "coordinate_order": {
+            "title": "Coordinate Order",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "kind",
+          "coordinate_scale",
+          "coordinate_order"
+        ],
+        "title": "ImageAnnotationContractSchema",
         "type": "object"
       },
       "WorkflowProgressStepSchema": {

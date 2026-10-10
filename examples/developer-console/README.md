@@ -1,6 +1,6 @@
 # Cyberwave developer console
 
-Thirteen examples share the official `cyberwave` client, optional React/3D packages and a Cyberwave-style header. Start them from the [SDK repository root](../../README.md), after `pnpm build`, with `pnpm server` and `pnpm dev`.
+Fifteen examples share the official `cyberwave` client, optional React/3D packages and a Cyberwave-style header. Start them from the [SDK repository root](../../README.md), after `pnpm build`, with `pnpm server` and `pnpm dev`.
 
 | Type | Example | Integration |
 | --- | --- | --- |
@@ -17,12 +17,14 @@ Thirteen examples share the official `cyberwave` client, optional React/3D packa
 | Planning & governance | [11 · Workflows & schedules](http://127.0.0.1:5173/mission-library.html) | Templates, configured targets, recurring timing and real run history. |
 | Maintenance | [12 · Maintenance planning](http://127.0.0.1:5173/maintenance-planning.html) | Preventive/corrective proposals, window checks, saved findings and workflow links. |
 | Maintenance | [13 · Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) | Duplicate updates, verification evidence and delivery coverage. |
+| Human review & training | [14 · Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) | Workflow actions, consent and reviewed image collections. |
+| Human review & training | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) | Camera/video frames, boxes, polygons and backend ML tasks. |
 
 ## Production, local and custom connections
 
-Open **API** in the header to select production, localhost or a custom origin. The same `ConnectionPanel` serves all thirteen examples; page-level duplicates have been removed. Changing connection reloads the example and clears drafts, selections, models and previews. Export drafts first. Navigation between examples restores the gateway session. **Reset to public** replaces it with an anonymous production session. The page and header share one initialization request so a first visit cannot race two cookie sessions.
+Open **API** in the header to select production, localhost or a custom origin. The same `ConnectionPanel` serves all fifteen examples; page-level duplicates have been removed. Changing connection reloads the example and clears drafts, selections, models and previews. Export drafts first. Navigation between examples restores the gateway session. **Reset to public** replaces it with an anonymous production session. The page and header share one initialization request so a first visit cannot race two cookie sessions.
 
-The shared API header on every example defaults to `https://api.cyberwave.com`. Connect anonymously for public assets; enter a Cyberwave API token for private environments. Use `http://localhost:8000` or any custom HTTPS API origin for integration testing. Changing origins clears the scene and requires a new credential choice. Tokens stay in the local gateway's memory; model requests never forward them.
+The shared API header on every example defaults to `https://api.cyberwave.com`. Connect anonymously for public assets; enter a Cyberwave API token for private environments. Use `http://localhost:8000` or any custom HTTPS API origin for integration testing. Changing origins clears the scene and requires a new credential choice. Tokens stay in the local gateway's memory; storage/model-resource downloads never receive them.
 
 If a server-side `CYBERWAVE_API_TOKEN` is configured for the local gateway's exact origin, the explorer can use it when you explicitly connect to that local origin. It is never used for production or another custom origin. The current API origin and authentication state are shown in the header.
 
@@ -163,3 +165,7 @@ For application-owned server integrations, see the [typed governance and evidenc
 ### Human actions and dataset evidence (preview backend)
 
 Open [Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) from the header dropdown. Connect to the matching local backend as the assigned person. The example lists actions, submits explicit consent/acknowledgement, and displays a media collection by UUID. The platform inbox handles photo upload; Dataset → Samples handles labels. See [human-action recipes](../recipes/human-actions.ts), [evidence recipes](../recipes/evidence.ts), and [reviewed YOLO training export](../training/README.md). Remote reads remain available; this demonstration gateway limits mutations to authenticated local APIs.
+
+### Capture and annotation
+
+[15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) opens local photos or a real Dataset sample, captures camera frames, edits boxes/polygons and saves an explicit sample review. The shared header controls the target API. Enter a model UUID to load supported image tasks from the backend and explicitly run one; remote writes remain disabled in this demo. Masks remain model proposals until reviewed, with no fabricated mask-to-box conversion. See the [React annotation guide](../../packages/react/ANNOTATION.md) and [training export](../training/README.md).

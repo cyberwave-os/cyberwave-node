@@ -161,3 +161,18 @@ test('human responses and dataset reviews keep local write restrictions and scop
     assert.equal((await request('/gateway/media?url='+encodeURIComponent('https://storage.example.com/unrelated.png'))).status,403);
   });
 });
+
+test('image model tasks reuse public routes with bounded authenticated local image writes',async()=>{
+  const calls=[];
+  await run(async(url,opts)=>{calls.push({url:String(url),opts});return Response.json({status:'completed'});},async request=>{
+    await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com',token:'remote-token'});
+    assert.equal((await request('/gateway/rest/api/v1/mlmodels/structured-actions')).status,200);
+    assert.equal((await request('/gateway/rest/api/v1/mlmodels/model')).status,200);
+    assert.equal((await request('/gateway/rest/api/v1/mlmodels/model/run','POST',{})).status,405);
+    await request('/gateway/connection','POST',{baseUrl:'http://localhost:8000'});
+    assert.equal((await request('/gateway/rest/api/v1/mlmodels/model/run','POST',{image_base64:'a'.repeat(2*1024*1024)})).status,200);
+    assert.equal((await request('/gateway/rest/api/v1/mlmodels/model/run','POST',{image_base64:'a'.repeat(28*1024*1024)})).status,413);
+    assert.equal((await request('/gateway/rest/api/v1/datasets/d/samples/s/review','POST',{padding:'a'.repeat(2*1024*1024)})).status,413);
+    assert.equal(calls.length,3);assert.equal(calls.at(-1).opts.headers.Authorization,'Bearer local-only-secret');
+  });
+});

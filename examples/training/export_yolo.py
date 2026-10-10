@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
@@ -58,9 +59,21 @@ def reviewed_samples(origin: str, token: str, dataset_uuid: str) -> list[dict]:
         after = cursor
 
 
-def yolo_labels(annotations: list[dict], classes: list[str]) -> str:
+def yolo_labels(annotations: list[dict], classes: list[str], task: str = "detect") -> str:
+    if task not in {"detect", "segment"}:
+        raise ValueError("Choose detect or segment")
     rows = []
     for annotation in annotations:
+        if task == "segment":
+            points = annotation.get("polygon")
+            if not isinstance(points, list) or not 3 <= len(points) <= 128 or any(len(p) != 2 or any(not math.isfinite(v) or not 0 <= v <= 1 for v in p) for p in points):
+                raise ValueError("Segmentation export requires a reviewed polygon for every object")
+            area = abs(sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(points, points[1:]+points[:1]))) / 2
+            if area <= 1e-12:
+                raise ValueError("Polygon must enclose a non-zero area")
+            coordinates = " ".join(f"{v:.8f}" for point in points for v in point)
+            rows.append(f"{classes.index(annotation['label'])} {coordinates}")
+            continue
         left, top, right, bottom = annotation["bbox"]
         if not all(0 <= value <= 1 for value in [left, top, right, bottom]) or not left < right or not top < bottom:
             raise ValueError("Invalid normalized box")
@@ -68,7 +81,7 @@ def yolo_labels(annotations: list[dict], classes: list[str]) -> str:
     return "\n".join(rows) + ("\n" if rows else "")
 
 
-def export_dataset(origin: str, token: str, train_uuid: str, validation_uuid: str, output: Path) -> Path:
+def export_dataset(origin: str, token: str, train_uuid: str, validation_uuid: str, output: Path, *, task: str = "detect") -> Path:
     from io import BytesIO
     from PIL import Image
     if train_uuid == validation_uuid:
@@ -84,8 +97,9 @@ def export_dataset(origin: str, token: str, train_uuid: str, validation_uuid: st
         raise ValueError("Training needs at least one labeled class, not only negative images")
     if any(a["label"] not in classes for s in splits["val"] for a in s["annotations"]):
         raise ValueError("Validation contains a class absent from training")
+    labels = {sample["uuid"]: yolo_labels(sample["annotations"], classes, task) for samples in splits.values() for sample in samples}
     output.mkdir(parents=True, exist_ok=False)  # Never mix a snapshot with an older export.
-    provenance = {"train_dataset_uuid": train_uuid, "validation_dataset_uuid": validation_uuid, "classes": classes, "samples": []}
+    provenance = {"task": task, "train_dataset_uuid": train_uuid, "validation_dataset_uuid": validation_uuid, "classes": classes, "samples": []}
     for split, samples in splits.items():
         for kind in ("images", "labels"):
             (output / kind / split).mkdir(parents=True)
@@ -98,7 +112,7 @@ def export_dataset(origin: str, token: str, train_uuid: str, validation_uuid: st
                 image.verify()
             identifier = str(UUID(sample["uuid"]))
             (output / "images" / split / f"{identifier}.{extension}").write_bytes(content)
-            (output / "labels" / split / f"{identifier}.txt").write_text(yolo_labels(sample["annotations"], classes))
+            (output / "labels" / split / f"{identifier}.txt").write_text(labels[sample["uuid"]])
             provenance["samples"].append({key: value for key, value in {**sample, "split": split}.items() if key != "file_url"})
     # JSON is valid YAML. No string interpolation into a YAML document.
     (output / "data.yaml").write_text(json.dumps({"path": str(output.resolve()), "train": "images/train", "val": "images/val", "names": dict(enumerate(classes))}, indent=2))
@@ -113,10 +127,11 @@ if __name__ == "__main__":
     parser.add_argument("--validation-dataset", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", help="Optional local YOLO checkpoint; enables training")
+    parser.add_argument("--task", choices=["detect", "segment"], default="detect")
     parser.add_argument("--epochs", type=int, default=20)
     args = parser.parse_args()
-    yaml = export_dataset(os.environ.get("CYBERWAVE_API_URL", "https://api.cyberwave.com"), os.environ["CYBERWAVE_API_TOKEN"], args.train_dataset, args.validation_dataset, args.output)
+    yaml = export_dataset(os.environ.get("CYBERWAVE_API_URL", "https://api.cyberwave.com"), os.environ["CYBERWAVE_API_TOKEN"], args.train_dataset, args.validation_dataset, args.output, task=args.task)
     print(f"Reviewed snapshot ready: {yaml}")
     if args.model:
         from ultralytics import YOLO
-        YOLO(args.model).train(data=str(yaml), epochs=args.epochs)
+        YOLO(args.model, task=args.task).train(data=str(yaml), epochs=args.epochs)

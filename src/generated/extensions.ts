@@ -118,6 +118,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mlmodels/structured-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Structured Actions
+         * @description Return the canonical catalog of playground ``structured_task`` values.
+         *
+         *     Serves as the machine-readable doc consumed by the Python SDK and the
+         *     frontend so everyone shares one source of truth for action ids, default
+         *     prompts, and output schemas. See
+         *     ``src.lib.structured_actions`` for the authoring surface.
+         */
+        get: operations["src_app_api_mlmodels_list_structured_actions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/datasets/collections": {
         parameters: {
             query?: never;
@@ -556,6 +581,19 @@ export interface components {
             /** Fields */
             fields: components["schemas"]["WorkflowInputFieldSchema"][];
         };
+        /** StructuredActionCatalogSchema */
+        StructuredActionCatalogSchema: {
+            /** Version */
+            version: number;
+            /** Semantics Version */
+            semantics_version: number;
+            /** Capability Tags */
+            capability_tags: {
+                [key: string]: string;
+            };
+            /** Actions */
+            actions: components["schemas"]["StructuredImageActionSchema"][];
+        };
         /** DatasetSchema */
         DatasetSchema: {
             /** Workspace Uuid */
@@ -883,6 +921,8 @@ export interface components {
             label: string;
             /** Bbox */
             bbox: number[];
+            /** Polygon */
+            polygon?: number[][] | null;
         };
         /** InspectionObservationInput */
         InspectionObservationInput: {
@@ -949,6 +989,36 @@ export interface components {
              * @enum {string}
              */
             source: "parameter" | "mapping";
+        };
+        /** StructuredImageActionSchema */
+        StructuredImageActionSchema: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /** Output Format */
+            output_format: string;
+            /** Output Schema */
+            output_schema: {
+                [key: string]: unknown;
+            };
+            /** Output Semantics */
+            output_semantics: {
+                [key: string]: unknown;
+            };
+            image_annotation?: components["schemas"]["ImageAnnotationContractSchema"] | null;
+            /** Default Prompt Template */
+            default_prompt_template: string;
+            /** Per Model Prompt Templates */
+            per_model_prompt_templates: {
+                [key: string]: string;
+            };
+            /** Requires Image */
+            requires_image: boolean;
+            /** Capability Tag */
+            capability_tag?: string | null;
         };
         /** ProcessedDatasetSchema */
         ProcessedDatasetSchema: {
@@ -1143,6 +1213,17 @@ export interface components {
             method: string;
             /** Calibration Reference */
             calibration_reference?: string | null;
+        };
+        /** ImageAnnotationContractSchema */
+        ImageAnnotationContractSchema: {
+            /** Version */
+            version: number;
+            /** Kind */
+            kind: string;
+            /** Coordinate Scale */
+            coordinate_scale: number;
+            /** Coordinate Order */
+            coordinate_order: string;
         };
         /** WorkflowProgressStepSchema */
         WorkflowProgressStepSchema: {
@@ -1340,6 +1421,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowExecutionSchema"][];
+                };
+            };
+        };
+    };
+    src_app_api_mlmodels_list_structured_actions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StructuredActionCatalogSchema"];
                 };
             };
         };

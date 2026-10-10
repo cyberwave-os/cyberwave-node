@@ -26,21 +26,35 @@ function EvidenceImage({
         <svg
           viewBox="0 0 1 1"
           preserveAspectRatio="none"
-          aria-label="Reviewed object boxes"
+          aria-label="Reviewed object regions"
           role="img"
         >
-          {annotations.map(({ bbox: [left, top, right, bottom], label }, i) => (
-            <rect
-              key={i}
-              x={left}
-              y={top}
-              width={right - left}
-              height={bottom - top}
-              vectorEffect="non-scaling-stroke"
-            >
-              <title>{label}</title>
-            </rect>
-          ))}
+          {annotations.map(
+            ({ bbox: [left, top, right, bottom], polygon, label }, i) =>
+              polygon ? (
+                <polygon
+                  key={i}
+                  points={polygon.map(([x, y]) => `${x},${y}`).join(" ")}
+                  vectorEffect="non-scaling-stroke"
+                  fill="none"
+                  stroke="#71e4d0"
+                  strokeWidth="2"
+                >
+                  <title>{label}</title>
+                </polygon>
+              ) : (
+                <rect
+                  key={i}
+                  x={left}
+                  y={top}
+                  width={right - left}
+                  height={bottom - top}
+                  vectorEffect="non-scaling-stroke"
+                >
+                  <title>{label}</title>
+                </rect>
+              ),
+          )}
         </svg>
       )}
     </div>

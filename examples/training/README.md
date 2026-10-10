@@ -9,7 +9,7 @@ pipeline supports YOLO.
 2. Append photos using **Append to Dataset**, the SDK recipe, or the Samples tab.
    Use **Create Attachment** first for a camera/model output that is still bytes.
    For video, select frames as attachments; retain recording/timestamp provenance.
-3. Review labels in **Dataset → Samples**. An approved empty label list explicitly
+3. Review boxes in **Dataset → Samples**, or boxes/polygons in the [annotation example](http://127.0.0.1:5173/image-annotation.html). An approved empty label list explicitly
    marks a negative example. Proposed detector labels are never auto-approved.
 4. Keep validation assets/campaigns separate from training. The exporter rejects
    identical files across splits; campaign leakage still needs a deliberate split.
@@ -48,3 +48,7 @@ Format and training references: [Ultralytics detection datasets](https://docs.ul
 and [training mode](https://docs.ultralytics.com/modes/train/). The recipe follows
 normalized `class center_x center_y width height` labels. Use licensing and model
 versions appropriate for your deployment.
+
+## Segmentation labels
+
+Pass `--task segment` and use a segmentation checkpoint if training. Every labeled object must have a reviewed single-ring polygon; mixed box-only labels fail before writing a snapshot. Empty approved images remain valid negatives. The exporter follows [Ultralytics segmentation format](https://docs.ultralytics.com/datasets/segment/): `class x1 y1 x2 y2 ...`, normalized to the original image. Detection mode (default) uses the enclosing box, including for polygon samples. The provenance manifest records the chosen task. Browser-rendered masks are not automatically training polygons.

@@ -1,0 +1,184 @@
+{
+  "detect_points": {
+    "id": "detect_points",
+    "label": "Detect points",
+    "description": "Return a JSON array of 2D points anchored to detected objects. Coordinates are normalized to 0-1000 to match Gemini Robotics ER's point format.",
+    "output_format": "points",
+    "output_schema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "point"
+        ],
+        "properties": {
+          "point": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[y, x] normalized to 0-1000"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "output_semantics": {
+      "kind": "image_points",
+      "frame": "image"
+    },
+    "image_annotation": {
+      "version": 1,
+      "kind": "points",
+      "coordinate_scale": 1000,
+      "coordinate_order": "yx"
+    },
+    "default_prompt_template": "Detect {target} in the image. Return a JSON array of objects of the form {{\"point\": [y, x], \"label\": \"<name>\"}} where each point is in {point_format}. Only output the JSON array.",
+    "per_model_prompt_templates": {
+      "molmo": "Point to the {target} in the image."
+    },
+    "requires_image": true,
+    "capability_tag": "capability:point_grounding"
+  },
+  "detect_boxes": {
+    "id": "detect_boxes",
+    "label": "Detect bounding boxes",
+    "description": "Return a JSON array of axis-aligned bounding boxes. Coordinates are `[ymin, xmin, ymax, xmax]` normalized to 0-1000.",
+    "output_format": "boxes",
+    "output_schema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "box_2d"
+        ],
+        "properties": {
+          "box_2d": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "[ymin, xmin, ymax, xmax] normalized to 0-1000"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "output_semantics": {
+      "kind": "image_boxes",
+      "frame": "image"
+    },
+    "image_annotation": {
+      "version": 1,
+      "kind": "boxes",
+      "coordinate_scale": 1000,
+      "coordinate_order": "yx"
+    },
+    "default_prompt_template": "Return bounding boxes as a JSON array with labels. Never return masks or code fencing. Limit to 25 objects. Detect {target}. If an object is present multiple times, name them according to their unique characteristic (colors, size, position, unique characteristics, etc.). The format should be as follows: [{{\"box_2d\": [ymin, xmin, ymax, xmax], \"label\": \"<label for the object>\"}}] normalized to 0-1000. The values in box_2d must only be integers.",
+    "per_model_prompt_templates": {},
+    "requires_image": true,
+    "capability_tag": "capability:box_grounding"
+  },
+  "segment": {
+    "id": "segment",
+    "label": "Segment",
+    "description": "Return per-object segmentation masks. Each item carries a `box_2d` region and a base64-encoded PNG `mask` that fills it.",
+    "output_format": "masks",
+    "output_schema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "box_2d",
+          "mask"
+        ],
+        "properties": {
+          "box_2d": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "[ymin, xmin, ymax, xmax] normalized to 0-1000"
+          },
+          "mask": {
+            "type": "string",
+            "description": "Base64 PNG (may be prefixed with `data:image/png;base64,`). Luminance of the PNG defines the silhouette within `box_2d`."
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "output_semantics": {
+      "kind": "image_masks",
+      "frame": "image"
+    },
+    "image_annotation": {
+      "version": 1,
+      "kind": "masks",
+      "coordinate_scale": 1000,
+      "coordinate_order": "yx"
+    },
+    "default_prompt_template": "Segment {target} in the image. Return a JSON array of objects of the form {{\"mask\": \"<base64 PNG>\", \"box_2d\": [ymin, xmin, ymax, xmax], \"label\": \"<name>\"}}. Only output the JSON array.",
+    "per_model_prompt_templates": {},
+    "requires_image": true,
+    "capability_tag": "capability:mask_grounding"
+  },
+  "point_trajectory": {
+    "id": "point_trajectory",
+    "label": "Predict image-plane trajectory",
+    "description": "Return an ordered JSON array of 2D points forming a trajectory (start \u2192 end) in image coordinates. Shape matches ``detect_points`` so it can be rendered with the same overlay; array order encodes the sequence (index = waypoint number). Matches Gemini Robotics-ER 1.6's native trajectory contract: https://ai.google.dev/gemini-api/docs/robotics-overview",
+    "output_format": "trajectory",
+    "output_schema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "point"
+        ],
+        "properties": {
+          "point": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[y, x] normalized to 0-1000"
+          },
+          "label": {
+            "type": "string",
+            "description": "Ordinal index as a string ('0', '1', ...). The array position is the source of truth; the label is a display hint."
+          }
+        }
+      }
+    },
+    "output_semantics": {
+      "kind": "image_trajectory",
+      "frame": "image"
+    },
+    "image_annotation": {
+      "version": 1,
+      "kind": "trajectory",
+      "coordinate_scale": 1000,
+      "coordinate_order": "yx"
+    },
+    "default_prompt_template": "Predict a trajectory for completing: {target}. Return an ordered JSON array of waypoints of the form {{\"point\": [y, x], \"label\": \"<index>\"}} where each point is in {point_format} and the array order is the time order of the trajectory (index 0 is the start, index n-1 is the end). Aim for 4-12 waypoints. Only output the JSON array.",
+    "per_model_prompt_templates": {
+      "molmo": "Point at each step of the trajectory for: {target}. Start from the beginning and emit 4-12 consecutive points."
+    },
+    "requires_image": true,
+    "capability_tag": "capability:point_grounding"
+  }
+}
