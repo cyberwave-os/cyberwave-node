@@ -143,3 +143,64 @@ test('video source changes, disabling and unmount close pending peers and detach
     assert.equal(peers.at(-1).closed, true);
   } finally { Object.assign(globalThis, previous); }
 });
+
+test('live telemetry discards old sensor samples and closes subscriptions on retarget and pause', async () => {
+  const { LiveSensorTelemetryPanel } = await import('@cyberwave/react');
+  let receive: (sample: unknown) => void = () => {}, closed = 0;
+  const transport = { subscribe: async (_topic: string, listener: typeof receive) => { receive = listener; return () => { closed++; }; } };
+  const client = createCyberwave();
+  const view = (id: string) => h(CyberwaveProvider, { client, children: h(LiveSensorTelemetryPanel, { transport, twinUuid: 'robot', sensorId: id, channel: 'imu' }) });
+  await mounted(async ({ render, element, click }) => {
+    await render(view('front'));
+    const sample = { sensor_id: 'front', measurement: 'first-sensor-value', points: Array.from({length: 100}, (_, n) => n) };
+    await act(async () => { receive(sample); await new Promise(resolve => setTimeout(resolve, 120)); });
+    assert.match(element.textContent!, /68 more items/);
+    assert.equal(sample.points.length, 100, 'The display summary never truncates the source payload');
+    assert.match(element.textContent!, /first-sensor-value/);
+    const oldReceive = receive;
+    await render(view('rear'));
+    assert.equal(closed, 1);
+    await act(async () => { oldReceive({ sensor_id: 'front', measurement: 'late-value' }); await new Promise(resolve => setTimeout(resolve, 120)); });
+    assert.doesNotMatch(element.textContent!, /first-sensor-value|late-value/);
+    await click('Pause telemetry');
+    assert.equal(closed, 2);
+    assert.match(element.textContent!, /paused/);
+  });
+});
+
+test('opinionated video capture stays disabled until decoded video and never autoconnects on target change', async () => {
+  const { SensorVideoPanel } = await import('@cyberwave/react/video');
+  const client = createCyberwave({ fetch: async () => assert.fail('Must not negotiate before Watch stream') });
+  const twin = { uuid: 'robot', name: 'Robot', capabilities: { sensors: [{ id: 'camera', name: 'Camera', type: 'rgb' }] } } as any;
+  const view = (source: 'live' | 'simulation') => h(CyberwaveProvider, { client, children: h(SensorVideoPanel, { twin, initialSensorId: 'camera', streamSource: source }) });
+  await mounted(async ({ render, element }) => {
+    await render(view('live'));
+    assert.equal(Array.from(element.querySelectorAll('button')).find(b => b.textContent === 'Capture frame')?.disabled, true);
+    assert.equal(element.querySelector('video'), null);
+    await render(view('simulation'));
+    assert.equal(element.querySelector('video'), null);
+    assert.match(element.textContent!, /simulation/);
+  });
+});
+
+test('frame review replaces and releases previews, and cannot submit an undecoded image', async () => {
+  const { CapturedFrameReview } = await import('@cyberwave/react/annotation');
+  const previous = { create: URL.createObjectURL, revoke: URL.revokeObjectURL };
+  const revoked: string[] = [];
+  let serial = 0;
+  URL.createObjectURL = () => `blob:frame-${++serial}`;
+  URL.revokeObjectURL = value => { revoked.push(value); };
+  const frame = () => ({ blob: new Blob(['png'], { type: 'image/png' }), width: 640, height: 400, mediaTime: 1, capturedAt: '2026-10-10T20:00:00Z' });
+  try {
+    await mounted(async ({ render, element }) => {
+      const view = () => h(CapturedFrameReview, { frame: frame(), onConfirm: () => assert.fail('Image has not decoded') });
+      await render(view());
+      assert.equal(element.querySelector('img')?.getAttribute('src'), 'blob:frame-1');
+      assert.equal(Array.from(element.querySelectorAll('button')).find(b => b.textContent === 'Use reviewed frame')?.disabled, true);
+      await render(view());
+      assert.deepEqual(revoked, ['blob:frame-1']);
+      assert.equal(element.querySelector('img')?.getAttribute('src'), 'blob:frame-2');
+    });
+    assert.deepEqual(revoked, ['blob:frame-1', 'blob:frame-2']);
+  } finally { URL.createObjectURL = previous.create; URL.revokeObjectURL = previous.revoke; }
+});

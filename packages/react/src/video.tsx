@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { CyberwaveError } from "cyberwave";
+import { CyberwaveError, twinSensors, type Twin } from "cyberwave";
 import {
   connectVideo,
   type VideoState,
@@ -15,6 +15,8 @@ import {
 } from "cyberwave/video";
 import { useCyberwave } from "./index.js";
 import { useResourceKey } from "./resource.js";
+import { captureVideoFrame, type CapturedFrame } from "./annotation/capture.js";
+import { SensorSelector } from "./sensor-controls.js";
 
 type ViewerState = {
   status: VideoState | "idle" | "error";
@@ -90,6 +92,7 @@ export function useVideoStream(
 export type VideoStreamProps = VideoStreamOptions & {
   target: VideoTarget;
   className?: string;
+  onReadyChange?: (ready: boolean) => void;
 };
 /** A forwarded video ref can be passed to captureVideoFrame from the annotation entry point. */
 export const VideoStream = forwardRef<HTMLVideoElement, VideoStreamProps>(
@@ -109,12 +112,15 @@ export const VideoStream = forwardRef<HTMLVideoElement, VideoStreamProps>(
   },
 );
 const Viewer = forwardRef<HTMLVideoElement, VideoStreamProps>(function Viewer(
-  { target, className, ...options },
+  { target, className, onReadyChange, ...options },
   ref,
 ) {
   const state = useVideoStream(target, options),
     video = useRef<HTMLVideoElement>(null);
   const [decoded, setDecoded] = useState(false);
+  useEffect(() => {
+    onReadyChange?.(decoded && state.status === "connected");
+  }, [decoded, state.status, onReadyChange]);
   useImperativeHandle(ref, () => video.current!, []);
   useEffect(() => {
     const element = video.current!;
@@ -149,6 +155,199 @@ const Viewer = forwardRef<HTMLVideoElement, VideoStreamProps>(function Viewer(
     </section>
   );
 });
+
+export type SensorVideoPanelProps = VideoStreamOptions & {
+  twin: Twin;
+  initialSensorId?: string;
+  /** Replace the built-in preview with an application review journey. */
+  showCapturePreview?: boolean;
+  streamSource?: "live" | "simulation";
+  streamInstanceId?: string;
+  /** Frame stays local unless the host explicitly uploads it. */
+  onCapture?: (frame: CapturedFrame, target: VideoTarget) => void;
+};
+/** Opinionated receive-only camera picker, connection controls and frame capture. */
+export function SensorVideoPanel(props: SensorVideoPanelProps) {
+  const key = useResourceKey(
+    useCyberwave(),
+    props.twin.uuid,
+    JSON.stringify(twinSensors(props.twin)),
+    props.initialSensorId,
+    props.streamSource,
+    props.streamInstanceId,
+    props.rtcConfiguration,
+    props.enabled,
+  );
+  return <SensorVideoControls key={key} {...props} />;
+}
+function SensorVideoControls({
+  twin,
+  initialSensorId = "",
+  showCapturePreview = true,
+  streamSource = "live",
+  streamInstanceId = "default",
+  rtcConfiguration,
+  enabled = true,
+  onCapture,
+}: SensorVideoPanelProps) {
+  const [sensorId, setSensorId] = useState(initialSensorId),
+    [watching, setWatching] = useState(false),
+    [attempt, setAttempt] = useState(0);
+  const [ready, setReady] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const [frame, setFrame] = useState<CapturedFrame>(),
+    [url, setUrl] = useState("");
+  const video = useRef<HTMLVideoElement>(null),
+    generation = useRef(0);
+  const sensor = twinSensors(twin).find(
+    (s) => s.id === sensorId && ["rgb", "depth"].includes(s.type),
+  );
+  const target: VideoTarget = {
+    twinUuid: twin.uuid,
+    sensorId,
+    streamSource,
+    streamInstanceId,
+    kind: sensor?.type === "depth" ? "depth" : "rgb",
+  };
+  useEffect(
+    () => () => {
+      generation.current++;
+    },
+    [],
+  );
+  useEffect(() => {
+    if (!frame) {
+      setUrl("");
+      return;
+    }
+    const next = URL.createObjectURL(frame.blob);
+    setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [frame]);
+  function reset() {
+    generation.current++;
+    setWatching(false);
+    setReady(false);
+    setFrame(undefined);
+    setError("");
+    setBusy(false);
+  }
+  async function capture() {
+    const current = generation.current;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await captureVideoFrame(video.current!);
+      if (current !== generation.current) return;
+      setFrame(result);
+      onCapture?.(result, target);
+    } catch (error) {
+      if (current === generation.current) setError((error as Error).message);
+    } finally {
+      if (current === generation.current) setBusy(false);
+    }
+  }
+  return (
+    <section className="cw-video-console" aria-label="Camera controls">
+      <div className="cw-sensor-heading">
+        <h3>{twin.name || "Twin camera"}</h3>
+        <span>
+          {streamSource} · {streamInstanceId}
+        </span>
+      </div>
+      <SensorSelector
+        twin={twin}
+        value={sensorId}
+        videoOnly
+        onChange={(id) => {
+          reset();
+          setSensorId(id);
+        }}
+      />
+      <div className="cw-pagination">
+        <button
+          type="button"
+          className="cw-button"
+          disabled={!enabled || !sensor || watching || !streamInstanceId.trim()}
+          onClick={() => {
+            setWatching(true);
+            setAttempt((n) => n + 1);
+          }}
+        >
+          Watch stream
+        </button>
+        <button
+          type="button"
+          className="cw-button"
+          disabled={!watching}
+          onClick={reset}
+        >
+          Stop viewing
+        </button>
+        <button
+          type="button"
+          className="cw-button"
+          disabled={!watching}
+          onClick={() => {
+            generation.current++;
+            setReady(false);
+            setFrame(undefined);
+            setError("");
+            setBusy(false);
+            setAttempt((n) => n + 1);
+          }}
+        >
+          Reconnect
+        </button>
+        <button
+          type="button"
+          className="cw-button"
+          disabled={!ready || busy || !watching}
+          onClick={capture}
+        >
+          Capture frame
+        </button>
+      </div>
+      {watching && sensor ? (
+        <VideoStream
+          key={`${sensorId}:${attempt}`}
+          ref={video}
+          target={target}
+          rtcConfiguration={rtcConfiguration}
+          onReadyChange={setReady}
+        />
+      ) : (
+        <p>Select an active sensor and watch its stream.</p>
+      )}
+      {error && (
+        <p role="alert" className="cw-error">
+          {error}
+        </p>
+      )}
+      {showCapturePreview && frame && url && (
+        <figure>
+          <img
+            className="cw-recording-video"
+            src={url}
+            alt={`Captured ${sensorId} frame`}
+          />
+          <figcaption>
+            {frame.width} × {frame.height} · {frame.capturedAt} · browser
+            capture time
+          </figcaption>
+          <a
+            className="cw-button"
+            href={url}
+            download={`${sensorId}-frame.png`}
+          >
+            Download PNG
+          </a>
+        </figure>
+      )}
+    </section>
+  );
+}
 
 function viewerError(error: Error): string {
   if (!(error instanceof CyberwaveError)) return error.message;

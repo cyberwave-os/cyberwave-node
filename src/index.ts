@@ -15,7 +15,7 @@ export type Environment = components['schemas']['EnvironmentSchema'];
 export type Twin = components['schemas']['TwinSchema'];
 export type VideoSession = ExtensionComponents['schemas']['TwinVideoSessionSchema'];
 export type TwinTelemetryQuery = NonNullable<paths['/api/v1/twins/{uuid}/telemetry']['get']['parameters']['query']>;
-export { twinSensors, subscribeSensorTelemetry } from './sensors.js';
+export { twinSensors, subscribeSensorTelemetry, sensorSampleId } from './sensors.js';
 export type { TwinSensor, SensorTelemetryTransport, SensorTelemetrySample } from './sensors.js';
 /** Preview contract: requires a backend with the inspection extension deployed. */
 export type InspectionCampaign = ExtensionComponents['schemas']['InspectionCampaignDetailSchema'];

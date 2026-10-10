@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { SensorTelemetryPanel } from "@cyberwave/react";
+import {
+  SensorTelemetryPanel,
+  LiveSensorTelemetryPanel,
+} from "@cyberwave/react";
 import type { Twin, TwinSensor } from "cyberwave";
 import { SensorWorkbench } from "./sensor-workbench.tsx";
+import { sensorTransportFor } from "./sensor-transport.ts";
 function History({ twin, sensor }: { twin: Twin; sensor: TwinSensor }) {
+  const transport = useMemo(() => sensorTransportFor(sensor.id), [sensor.id]);
+  const [channel, setChannel] = useState(
+    sensor.type === "depth" ? "depth" : "imu",
+  );
+  const [live, setLive] = useState(false);
   const [minutes, setMinutes] = useState(60),
     [end, setEnd] = useState(() => new Date().toISOString());
   const start = new Date(
@@ -11,6 +20,32 @@ function History({ twin, sensor }: { twin: Twin; sensor: TwinSensor }) {
   ).toISOString();
   return (
     <>
+      <label>
+        Live channel
+        <select
+          value={channel}
+          onChange={(e) => {
+            setLive(false);
+            setChannel(e.target.value);
+          }}
+        >
+          {["depth", "imu", "lidar", "pointcloud", "telemetry"].map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+      </label>
+      <button className="cw-button" onClick={() => setLive(!live)}>
+        {live ? "Disconnect telemetry" : "Connect live telemetry"}
+      </button>
+      {live && (
+        <LiveSensorTelemetryPanel
+          transport={transport}
+          twinUuid={twin.uuid}
+          sensorId={sensor.id}
+          channel={channel}
+          topicPrefix="local"
+        />
+      )}
       <span className="tag">Stored sensor samples</span>
       <h2 className="section-gap">Inspect one sensor at a time.</h2>
       <div className="toolbar fields">
@@ -62,8 +97,8 @@ function History({ twin, sensor }: { twin: Twin; sensor: TwinSensor }) {
         <pre className="draft-code">{`const stop = await subscribeSensorTelemetry(transport, {\n  twinUuid: ${JSON.stringify(twin.uuid)},\n  sensorId: ${JSON.stringify(sensor.id)},\n  channel: 'imu', // Use the channel your producer publishes.\n  topicPrefix: 'local', // Deployment prefix; production is empty.\n}, sample => renderSample(sample.payload), abort.signal);\n// stop() when leaving this view.`}</pre>
         <p className="muted compact">
           The API connection header configures HTTP only. Broker authentication,
-          WebSocket URL and topic prefix belong to your host application; this
-          example does not open a broker connection.
+          WebSocket URL and topic prefix belong to your host application; the
+          local example bridge holds broker credentials on the server.
         </p>
       </details>
     </>
@@ -86,7 +121,7 @@ function App() {
         </a>
       </div>
       <SensorWorkbench>
-        {(twin, sensor) => <History twin={twin} sensor={sensor} />}
+        {(twin, sensor) => <History twin={twin} sensor={sensor!} />}
       </SensorWorkbench>
     </main>
   );

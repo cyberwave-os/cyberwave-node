@@ -33,6 +33,29 @@ export type SensorTelemetryTransport = {
   ) => Promise<() => void>;
 };
 
+/** Both names are used by existing producers; conflicting identities fail closed. */
+export function sensorSampleId(
+  sample: Record<string, unknown>,
+): string | undefined {
+  const nested =
+    sample.type === "depth_data" &&
+    sample.data &&
+    typeof sample.data === "object"
+      ? (sample.data as Record<string, unknown>).sensor_id
+      : undefined;
+  const id = sample.sensor_id ?? nested,
+    alias = sample.sensor;
+  if (
+    sample.sensor_id !== undefined &&
+    nested !== undefined &&
+    sample.sensor_id !== nested
+  )
+    return undefined;
+  if (id !== undefined && alias !== undefined && id !== alias) return undefined;
+  const value = id ?? alias;
+  return typeof value === "string" ? value : undefined;
+}
+
 /** Subscribe to one exact channel and reject unidentified or other-sensor samples. */
 export async function subscribeSensorTelemetry(
   transport: SensorTelemetryTransport,
@@ -73,7 +96,7 @@ export async function subscribeSensorTelemetry(
     )
       return;
     const sample = payload as Record<string, unknown>;
-    if (sample.sensor_id === sensorId)
+    if (sensorSampleId(sample) === sensorId)
       onSample({ topic, receivedAt: Date.now(), payload: sample });
   });
   const close = () => {

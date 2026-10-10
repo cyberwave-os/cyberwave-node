@@ -1,5 +1,6 @@
 /** Development BFF: remote reads, explicit local inspection and workflow writes. */
 import { randomBytes, randomUUID } from 'node:crypto';
+import { streamSensorEvents } from './sensor-events.mjs';
 import { Readable } from 'node:stream';
 import { normalizeApiUrl } from 'cyberwave';
 const ttl = 60 * 60 * 1000;
@@ -16,7 +17,8 @@ const modelRead = /^\/api\/v1\/mlmodels\/(?:structured-actions|executions\/[a-zA
 const modelRun = /^\/api\/v1\/mlmodels\/[a-zA-Z0-9-]+\/run$/;
 const evidenceRead = /^\/api\/v1\/(?:workflow-actions(?:\/[a-zA-Z0-9-]+)?|datasets(?:\/[a-zA-Z0-9-]+(?:\/samples)?)?)$/;
 const evidenceWrite = /^\/api\/v1\/(?:workflow-actions\/[a-zA-Z0-9-]+\/respond|datasets\/(?:collections|[a-zA-Z0-9-]+\/samples(?:\/[a-zA-Z0-9-]+\/review)?))$/;
-export function createConnectionGateway({ localToken, localOrigin = 'http://localhost:8000' } = {}, transport = fetch) {
+export function createConnectionGateway(settings = {}, transport = fetch) {
+  const { localToken, localOrigin = 'http://localhost:8000' } = settings;
   const sessions = new Map();
   function registerResources(data, session) {
     if (Array.isArray(data)) return data.forEach(row => registerResources(row, session));
@@ -67,6 +69,11 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
     }
     if (!session) { send(401, { detail: 'Connect to an API first. Session may have expired.' }); return true; }
     if (url.pathname === '/gateway/connection' && req.method === 'GET') { send(200, { connectionId: session.connectionId, baseUrl: session.origin, authenticated: !!session.token }); return true; }
+    if (url.pathname === '/gateway/sensor-events' && req.method === 'GET') {
+      if (req.headers['x-cyberwave-connection'] !== session.connectionId) { send(409, { detail: 'API connection changed.' }); return true; }
+      await streamSensorEvents(req, res, url, session, () => sessions.get(id) === session && session.expires > Date.now(), { ...settings, localOrigin }, transport);
+      return true;
+    }
     if (url.pathname.startsWith('/gateway/rest/')) {
       // The cookie is shared by tabs. A stale client must never silently adopt a
       // different origin or account after another tab reconnects. This ID is a

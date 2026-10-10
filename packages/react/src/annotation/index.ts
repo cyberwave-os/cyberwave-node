@@ -15,3 +15,4 @@ export {
   type ImageModelResult,
   type ImageMark,
 } from "./model.js";
+export { CapturedFrameReview, type ReviewedFrame } from "./frame-review.js";

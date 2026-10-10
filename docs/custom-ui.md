@@ -156,3 +156,90 @@ Compose viewing and commands as separate controls. A read-only dashboard needs n
 This increment provides reusable viewers and exact sensor history; it does not introduce new media, mission or telemetry stores. Integrations still need deployment-specific ICE/broker configuration, producer activation/availability, crash-resilient viewer cleanup, and adapters for synchronized playback or binary sensor formats. A backend-advertised transport/capability contract would remove more host configuration later. Keep those additions close to existing services rather than duplicating protocols in each UI.
 
 Executable TypeScript composition: [video and sensor recipe](../examples/recipes/video-and-sensors.ts). Full pages: [video source](../examples/developer-console/src/sensor-video.tsx), [telemetry source](../examples/developer-console/src/sensor-telemetry.tsx).
+
+## Compose a camera console and a live sensor panel
+
+Use the opinionated components when the standard interaction is enough; keep the
+headless hooks for layouts with different controls.
+
+```tsx
+import { CyberwaveProvider, LiveSensorTelemetryPanel } from '@cyberwave/react';
+import { SensorVideoPanel } from '@cyberwave/react/video';
+import '@cyberwave/react/styles.css';
+
+<CyberwaveProvider client={client}>
+  <SensorVideoPanel
+    twin={twin}
+    streamSource="simulation"
+    streamInstanceId={simulationId}
+    rtcConfiguration={stableRtcConfiguration}
+    onCapture={(frame, target) => reviewLocally(frame, target)}
+  />
+  <LiveSensorTelemetryPanel
+    transport={authenticatedTransport}
+    twinUuid={twin.uuid}
+    sensorId="depth_camera"
+    channel="depth"
+    topicPrefix="local"
+  />
+</CyberwaveProvider>
+```
+
+`SensorVideoPanel` provides a catalog-backed sensor selector, explicit Watch,
+Stop and Reconnect controls, and a PNG preview/download. Capture stays disabled
+until the browser decodes a frame. Switching API client, twin, source or instance
+clears the previous view and pending capture. An `onCapture` callback can open your
+annotation/review flow; it does not upload evidence automatically. `enabled={false}`
+disables viewing. `SensorSelector` is also available separately for controlled forms.
+
+Compose `CapturedFrameReview` from `@cyberwave/react/annotation` after capture:
+
+```tsx
+const [capture, setCapture] = useState<{ frame: CapturedFrame; target: VideoTarget }>();
+
+<SensorVideoPanel twin={twin} showCapturePreview={false}
+  onCapture={(frame, target) => setCapture({ frame, target })} />
+{capture && <CapturedFrameReview frame={capture.frame}
+  onConfirm={({ frame, annotations }, signal) =>
+    saveReviewedEvidence({ frame, annotations, target: capture.target }, signal)} />}
+```
+
+Import `CapturedFrame` from the annotation entry point, `VideoTarget` from
+`cyberwave/video`, and `@cyberwave/react/annotation.css`. The review component reuses
+`ImageAnnotationEditor` (Annotorious rectangles/polygons and canonical dataset
+annotations). It owns the local preview URL, busy/error states and explicit
+confirmation. Replacing the frame aborts pending handoff and resets annotations.
+The host supplies `saveReviewedEvidence`, honors its abort signal, and chooses the
+dataset, ML task, provenance and persistence policy. Keep the captured `target`
+snapshot; do not substitute the currently selected sensor when saving older evidence.
+Scope the review to the current API client and twin, as the example workbench does.
+Example 16 exports the reviewed annotations and PNG locally, with no implicit upload.
+
+`LiveSensorTelemetryPanel` subscribes to one exact channel, shows the latest
+sample, an arrival count and staleness, and provides Pause/Resume. Its rendering is
+bounded to ten updates per second and it retains only the latest sample. Long
+binary strings and arrays are summarized in the UI; the hook's payload remains intact.
+Use `useLiveSensorTelemetry` to build a gauge or chart with your own unit labels.
+Transport subscription errors are shown. If an established transport ends, the
+last arrival becomes stale; pause and resume explicitly to reconnect.
+
+The live helper recognizes the existing `sensor_id` and `sensor` identities, plus
+`data.sensor_id` on a `depth_data` envelope. Conflicting identities are rejected.
+Older unlabelled depth publishers need an update before exact sensor filtering can
+work. Updated simulation producers include `data.stream_instance_id` and mark
+the envelope `source_type: "sim"`; preserve these fields with evidence. A sensor match does not assert a simulation-run match: keep your transport
+scoped to the intended source/run when multiple producers publish the same topic.
+
+Example 16 uses the camera console. Example 17 now includes a live subscription
+alongside stored history. Its development bridge holds local MQTT credentials on
+the server, checks twin read access and sensor capabilities, rejects API connection
+changes, and closes after five minutes. It does not proxy arbitrary MQTT topics or
+publish commands. Production applications should supply their own authenticated
+subscription adapter and authorization lifecycle. Live packets are not necessarily
+persisted; an empty history panel does not mean a live sensor is offline.
+
+For a local simulation, producer and viewer must agree on **twin + sensor + kind +
+source + stream instance**. Use the returned simulation run ID, not `default`.
+Check the SFU health endpoint, broker prefix, advertised ICE address and camera
+producer logs before retrying a failed viewer. Starting/stopping simulation and
+commanding joints remain separate authorized application actions.

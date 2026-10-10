@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { EnvironmentBrowser } from "@cyberwave/react";
+import { EnvironmentBrowser, SensorSelector } from "@cyberwave/react";
 import {
   twinSensors,
   type CyberwaveClient,
@@ -14,14 +14,20 @@ import "./workbench.css";
 export function SensorWorkbench({
   children,
   videoOnly = false,
+  selectSensor = true,
 }: {
   videoOnly?: boolean;
-  children: (twin: Twin, sensor: TwinSensor) => ReactNode;
+  selectSensor?: boolean;
+  children: (twin: Twin, sensor?: TwinSensor) => ReactNode;
 }) {
   return (
     <ConnectedWorkbench>
       {(client) => (
-        <Catalog client={client} videoOnly={videoOnly}>
+        <Catalog
+          client={client}
+          videoOnly={videoOnly}
+          selectSensor={selectSensor}
+        >
           {children}
         </Catalog>
       )}
@@ -32,10 +38,12 @@ function Catalog({
   client,
   children,
   videoOnly,
+  selectSensor,
 }: {
   videoOnly: boolean;
+  selectSensor: boolean;
   client: CyberwaveClient;
-  children: (twin: Twin, sensor: TwinSensor) => ReactNode;
+  children: (twin: Twin, sensor?: TwinSensor) => ReactNode;
 }) {
   const [environment, setEnvironment] = useState<Environment>();
   return (
@@ -58,6 +66,7 @@ function Catalog({
             client={client}
             environment={environment}
             videoOnly={videoOnly}
+            selectSensor={selectSensor}
           >
             {children}
           </Sensors>
@@ -82,11 +91,13 @@ function Sensors({
   environment,
   children,
   videoOnly,
+  selectSensor,
 }: {
   videoOnly: boolean;
+  selectSensor: boolean;
   client: CyberwaveClient;
   environment: Environment;
-  children: (twin: Twin, sensor: TwinSensor) => ReactNode;
+  children: (twin: Twin, sensor?: TwinSensor) => ReactNode;
 }) {
   const [twins, setTwins] = useState<Twin[]>(),
     [selected, setSelected] = useState(""),
@@ -138,21 +149,14 @@ function Sensors({
             ))}
           </select>
         </label>
-        <label>
-          Sensor
-          <select
+        {selectSensor && twin && (
+          <SensorSelector
+            twin={twin}
             value={sensorId}
-            disabled={!twin}
-            onChange={(event) => setSensorId(event.target.value)}
-          >
-            <option value="">Select a sensor</option>
-            {sensors.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.type}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={setSensorId}
+            videoOnly={videoOnly}
+          />
+        )}
       </div>
       {twin && (
         <p className="muted compact">
@@ -167,8 +171,8 @@ function Sensors({
           asset or twin schema before integrating them in a custom UI.
         </p>
       )}
-      {twin && sensor && (
-        <div key={`${twin.uuid}:${sensor.id}`} className="section-gap">
+      {twin && (!selectSensor || sensor) && (
+        <div key={`${twin.uuid}:${sensor?.id ?? ""}`} className="section-gap">
           {children(twin, sensor)}
         </div>
       )}

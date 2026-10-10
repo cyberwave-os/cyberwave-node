@@ -120,3 +120,12 @@ test("live subscriptions reject wildcard channels before touching the transport"
       /exact twin/,
     );
 });
+
+test('range aliases and depth envelopes keep exact sensor identity; conflicting labels are rejected', async () => {
+  const { sensorSampleId } = await import('../dist/index.js');
+  assert.equal(sensorSampleId({ sensor: 'front' }), 'front');
+  assert.equal(sensorSampleId({ type: 'depth_data', data: { sensor_id: 'depth' } }), 'depth');
+  assert.equal(sensorSampleId({ sensor_id: 'front', sensor: 'rear' }), undefined);
+  assert.equal(sensorSampleId({ type: 'depth_data', sensor_id: 'front', data: { sensor_id: 'rear' } }), undefined);
+  assert.equal(sensorSampleId({ data: { sensor_id: 'depth' } }), undefined);
+});

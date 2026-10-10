@@ -179,3 +179,20 @@ For a queued model, the panel shows the accepted execution ID and status. **Stop
 Examples 16 and 17 share environment/twin/sensor selection, the API header and SDK hooks. Sensors come from backend-resolved capabilities. The video example requires an active RGB/depth producer, the new backend video routes, and a reachable SFU; it consumes live or simulation video without starting a producer or issuing control commands. Configure deployment ICE servers in its advanced control if needed. Its POST negotiation is allowed only against authenticated local APIs in this development BFF. Stop viewing before changing API connections. The telemetry example reads persisted samples in a fixed window and shows a real-time integration snippet; it does not connect to MQTT or simulate data.
 
 See the [custom UI guide](../../docs/custom-ui.md) for auth, source identity, lifecycle, error states, clocks, styling, recording capture and remaining deployment capabilities.
+
+### Live sensor bridge
+
+Example 16 now uses the reusable `SensorVideoPanel`; example 17 includes
+`LiveSensorTelemetryPanel` alongside REST history. For local MQTT reads configure
+`DEMO_MQTT_URL=mqtt://127.0.0.1:1883`, `DEMO_MQTT_USERNAME`,
+`DEMO_MQTT_PASSWORD`, and `DEMO_MQTT_ENVIRONMENT_PREFIX=local` on the server.
+The header must select the configured local API and an authenticated session.
+The bridge checks read access and the exact sensor ID, allows only the displayed
+telemetry channels, releases disconnected subscriptions and expires streams after
+five minutes. Resume explicitly after an interrupted or expired subscription.
+
+Simulation video uses the exact returned stream instance ID. The camera console
+is receive-only: selecting Simulation does not launch a workload. Capture and
+PNG download operate on decoded browser frames. See the
+[composition guide](../../docs/custom-ui.md#compose-a-camera-console-and-a-live-sensor-panel)
+for custom capture/annotation flows and application-owned MQTT adapters.

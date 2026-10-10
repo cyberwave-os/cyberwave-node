@@ -96,3 +96,4 @@ export { WorkflowMonitor, workflowError } from './workflow-monitor.js';
 export { InspectionVerificationPanel } from './inspection-verification.js';
 
 export { SensorTelemetryPanel, useSensorTelemetry } from './sensor-telemetry.js';
+export { SensorSelector, LiveSensorTelemetryPanel, useLiveSensorTelemetry } from './sensor-controls.js';

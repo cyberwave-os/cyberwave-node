@@ -28,3 +28,12 @@
 .cw-telemetry-row { padding: 12px 0; border-bottom: 1px solid var(--cw-border, #293745); }
 .cw-telemetry-row summary { cursor: pointer; overflow-wrap: anywhere; }
 .cw-telemetry-data { overflow: auto; max-height: 360px; font-size: 12px; }
+
+.cw-sensor-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.cw-sensor-selector { display: grid; gap: .5rem; margin-block: 1rem; }
+.cw-sensor-selector select { font: inherit; color: var(--cw-text, #e9f0f7); background: var(--cw-bg, #111820); padding: .65rem; border: 1px solid var(--cw-border, #2a3745); border-radius: .5rem; }
+.cw-video-console { display: grid; gap: .75rem; }
+.cw-video-console figure { margin: 0; }
+.cw-video-console figcaption { font-size: .8rem; margin-block: .5rem; }
+.cw-video-console .cw-pagination,.cw-frame-review .cw-pagination { flex-wrap: wrap; justify-content: flex-start; }
+.cw-sensor-heading span,.cw-frame-review p { overflow-wrap: anywhere; }

@@ -56,7 +56,7 @@ export function createGateway(settings, fetchApi = fetch) {
 
   const controller = createControllerGateway(settings, upstream, requireTwin);
   const simulation = createSimulationGateway(settings, upstream);
-  const connections = createConnectionGateway({ localToken: settings.token, localOrigin: upstreamBase.origin }, fetchApi);
+  const connections = createConnectionGateway({ mqttUrl: settings.mqttUrl, mqttUsername: settings.mqttUsername, mqttPassword: settings.mqttPassword, mqttPrefix: settings.mqttPrefix, localToken: settings.token, localOrigin: upstreamBase.origin }, fetchApi);
   const server = createServer(async (req, res) => {
     const send = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
     try {

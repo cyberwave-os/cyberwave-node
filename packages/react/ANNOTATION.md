@@ -24,6 +24,14 @@ function Review({ imageUrl, saveReview }: {
 // ImageCapture onCapture receives {blob, width, height, mediaTime, capturedAt}.
 ```
 
+For a complete capture-review step, use `CapturedFrameReview` with a `CapturedFrame`
+and an `onConfirm({ frame, annotations }, signal)` handler. It reuses this editor,
+releases preview URLs when the frame changes, and supplies pending/error states
+for the application's handoff. See the [camera composition guide](../../docs/custom-ui.md#compose-a-camera-console-and-a-live-sensor-panel)
+and [example 16](http://127.0.0.1:5173/sensor-video.html) for video capture, review,
+PNG download and annotation export. Keep source identity alongside the frame;
+the host still owns upload and dataset policy.
+
 ## One coordinate and storage boundary
 
 - The editor uses [Annotorious](https://annotorious.dev/api-reference/shape/) for drawing, selection, rectangle resize and polygon vertex editing. Its pixel coordinates are converted at the SDK boundary to `SampleAnnotation`: `bbox: [left, top, right, bottom]` and optional `polygon: [[x,y], ...]`, normalized to `[0,1]` against the original image dimensions.
