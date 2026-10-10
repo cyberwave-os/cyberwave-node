@@ -4,7 +4,7 @@ const groups = [
   { name: 'Visualization · 2', items: [['/', '03 · Cesium GIS & mission drafting'], ['/twin-monitor.html', '04 · Twin & camera monitor']] },
   { name: 'Simulation · 2', items: [['/mission-simulation.html', '05 · Mission timeline'], ['/robot-environment.html', '06 · Robot environment & runtime modes']] },
   { name: 'Command & control · 1', items: [['/keyboard-telecontrol.html', '07 · Keyboard controller input']] },
-  { name: 'Planning & governance · 1', items: [['/mission-library.html', '11 · Workflows, missions & runs']] },
+  { name: 'Planning & governance · 1', items: [['/mission-library.html', '11 · Workflows & schedules']] },
   { name: 'Inspection & GIS · 3', items: [['/aerial-inspection.html', '08 · Aerial inspection planning'], ['/inspection-workbench.html', '09 · Campaign & evidence review'], ['/recording-review.html', '10 · Recording catalog & playback']] },
 ];
 const header = document.createElement('header'); header.className = 'example-header';

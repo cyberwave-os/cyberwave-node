@@ -12,6 +12,9 @@ export type InspectionReviewInput = ExtensionComponents['schemas']['CreateInspec
 export type Mission = components['schemas']['MissionSchema'];
 export type MissionExecution = components['schemas']['MissionExecutionSchema'];
 export type Workflow = components['schemas']['WorkflowSchema'];
+export type WorkflowNode = components['schemas']['WorkflowNodeSchema'];
+export { workflowEditableFields, workflowNodePatch, workflowSchedules } from './workflows.js';
+export type { WorkflowEditableField } from './workflows.js';
 export type WorkflowExecution = components['schemas']['WorkflowExecutionSchema'];
 export type WorkflowQuery = NonNullable<paths['/api/v1/workflows']['get']['parameters']['query']>;
 export type Recording = components['schemas']['RecordingListItem'];
@@ -101,6 +104,14 @@ export function createCyberwave(options: ClientOptions = {}) {
   };
   /** Existing workflow engine. List is currently unpaginated; always scope large catalogs. */
   const workflows = {
+    clone: (uuid: string, body: components['schemas']['WorkflowCloneSchema'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/workflows/{uuid}/clone', {params:{path:{uuid}},body,...opts})),
+    update: (uuid: string, body: components['schemas']['WorkflowUpdateSchema'], opts: ReadOptions = {}) => data(rest.PUT('/api/v1/workflows/{uuid}', {params:{path:{uuid}},body,...opts})),
+    updateNode: (uuid: string, node_uuid: string, body: components['schemas']['WorkflowNodeUpdateSchema'], opts: ReadOptions = {}) => data(rest.PUT('/api/v1/workflows/{uuid}/nodes/{node_uuid}', {params:{path:{uuid,node_uuid}},body,...opts})),
+    activate: (uuid: string, opts: ReadOptions = {}) => data(rest.POST('/api/v1/workflows/{uuid}/activate', {params:{path:{uuid}},...opts})),
+    deactivate: (uuid: string, opts: ReadOptions = {}) => data(rest.POST('/api/v1/workflows/{uuid}/deactivate', {params:{path:{uuid}},...opts})),
+    execute: (uuid: string, trigger_data: Record<string, unknown> = {}, opts: ReadOptions = {}) => data(rest.POST('/api/v1/workflows/{uuid}/execute', {params:{path:{uuid}},body:{trigger_data},...opts})),
+    execution: (uuid: string, execution_uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}/executions/{execution_uuid}', {params:{path:{uuid,execution_uuid}},...opts})),
+    cancel: (execution_uuid: string, opts: ReadOptions = {}) => data(rest.POST('/api/v1/workflows/executions/{execution_uuid}/cancel', {params:{path:{execution_uuid}},...opts})),
     templates: (opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/templates', opts)),
     list: (query: WorkflowQuery = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows', { params: { query }, ...opts })),
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}', { params: { path: { uuid } }, ...opts })),

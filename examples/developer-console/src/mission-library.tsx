@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { ConnectedWorkbench } from "./workbench-connection.tsx";
-import { MissionCatalog } from "./mission-catalog.tsx";
+import { WorkflowWorkbench } from "./workflow-workbench.tsx";
 import "@cyberwave/react/styles.css";
 import "./workbench.css";
 
@@ -16,7 +16,7 @@ const primitives = [
   ["Run", "One execution: its resolved targets, status, results and history."],
   [
     "Schedule",
-    "Optional timing for runs. Start now, on an event, once later or repeatedly.",
+    "Recurring timing for workflow runs.",
   ],
 ];
 function App() {
@@ -32,9 +32,9 @@ function App() {
             Plan operational activity with the primitives Cyberwave already has.
           </p>
         </div>
-        <span className="tag">Read-only catalog</span>
+        <span className="tag">Templates → workflows → runs</span>
       </div>
-      <section className="panel">
+      <details className="panel"><summary>How templates, workflows and runs fit together</summary>
         <div className="comparison">
           {primitives.map(([name, description]) => (
             <article key={name}>
@@ -52,9 +52,7 @@ function App() {
         <p className="note">
           <strong>Proposed simplification:</strong> “mission” can be the name
           your product gives an operational workflow run. New applications
-          should not need another Mission or Plan record. This example reads
-          current templates, workflows and runs; unified one-off scheduling and
-          dynamic allocation are still backend increments.
+          should not need another Mission or Plan record. This example clones templates, configures declared defaults, runs workflows and enables recurring schedules on a local backend. One-off scheduling and dynamic allocation remain backend increments.
         </p>
         <details>
           <summary>What are environments and tasks in this model?</summary>
@@ -94,7 +92,7 @@ function App() {
           </p>
           <p>
             The older Mission model stores task sequences for one twin. Its
-            definitions and runs are shown below for compatibility; migrate
+            definitions and runs remain accessible through the compatibility SDK methods; migrate
             existing consumers only after checking execution semantics and
             preserving history.
           </p>
@@ -129,10 +127,10 @@ function App() {
             </p>
           </article>
         </div>
-      </section>
+      </details>
       <section className="section-gap">
         <ConnectedWorkbench>
-          {(client) => <MissionCatalog key={client.baseUrl} client={client} />}
+          {(client) => <WorkflowWorkbench key={client.baseUrl} client={client} />}
         </ConnectedWorkbench>
       </section>
     </main>

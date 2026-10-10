@@ -2,47 +2,41 @@
 
 ## Planning with workflows
 
-The preferred public model is **workflow template → configured workflow → run**, with optional scheduling. A mission can be a domain label for an operational run; new applications should not need separate Task, Mission and Workflow records to represent the same activity. Templates already use Workflow records, and subworkflows reuse the existing Run Workflow node.
-
-A custom UI can select a template, configure inputs/targets, run now or schedule, then monitor the execution. The current SDK exposes read helpers and the generated REST contract; unified one-off scheduling, correlated child completion and dynamic resource allocation still need backend lifecycle work. Existing interval/cron workflow triggers are the starting point. Dynamic selection should resolve eligible resources in a workflow step and record the choice on the run; some edge actions still require targets fixed before compilation.
-
-Legacy task-sequence Mission APIs remain compatibility surfaces. The example browses both stores while migration semantics are assessed. No new Plan/Activity entity or second orchestration engine is introduced.
-
-## Missions, simply
-
-| Primitive | Meaning |
-| --- | --- |
-| Environment | Where activity happens: a scene, site or operating area. |
-| Twin | What participates: a robot, machine or represented object. |
-| Task | A reusable capability, such as navigation, motion or model inference. |
-| Mission / plan | The intended activity. Currently represented by a task-sequence Mission or an environment-bound Workflow. |
-| Execution | One attempt to run a definition, now or at a requested time. |
-| Workflow | Reusable orchestration with its own executions. Run Workflow nodes can invoke other workflows. |
-
-For task-sequence missions, a planned run is stored in the backend's `MissionExecution`, including `start_at`; the reusable definition is stored in `Mission`. Missions and workflows do not require a one-to-one match. Inspection campaigns group evidence and reviews and can exist without robot missions. The same mission primitives can serve logistics, inspection, manufacturing or command/control. A manipulation/composite task label alone does not imply an implemented controller capability.
-
-See [Workflows, missions & runs](http://127.0.0.1:5173/mission-library.html) for a readable walkthrough and real mission browsing. The development backend adds these read views over the existing mission store:
+Use **workflow template → configured workflow → run**, with an optional recurring schedule. The [Workflows & schedules example](http://127.0.0.1:5173/mission-library.html) lets you select a template, create an inactive draft in an environment or workspace, configure targets, run now or enable a recurring schedule, and monitor node execution/results. It uses existing backend endpoints; no new mission model or scheduler is required.
 
 ```ts
-await client.environments.missions(environmentId, { limit: 20, offset: 0 });
-await client.missions.forWorkspace(workspaceId, {
-  environment_uuid: environmentId, // optional filter
-  // twin_uuid: twinId,
-  limit: 20, offset: 0,
+const templates = await client.workflows.templates();
+const draft = await client.workflows.clone(templates[0].uuid, {
+  name: 'Daily site review', environment_uuid: environmentId,
 });
-await client.missions.executions(twinId, missionId);
-// Existing workflow plans are a separate read projection in the same example.
-await client.workflows.list({ workspace_uuid: workspaceId, environment_uuid: environmentId });
-await client.workflows.executions(workflowId);
+const workflow = await client.workflows.get(draft.uuid);
+const fields = workflowEditableFields(workflow); // import from 'cyberwave'
+// Bind declared fields with workflows.updateNode and workflowNodePatch.
+// Node edits carry expected_updated_at; conflicts require reloading.
+await client.workflows.activate(workflow.uuid); // validates the full graph
+const run = await client.workflows.execute(workflow.uuid, { node_uuid: manualTriggerId });
+await client.workflows.execution(workflow.uuid, run.uuid);
+await client.workflows.cancel(run.uuid);
 ```
 
-The new routes are `GET /api/v1/environments/{uuid}/missions` and `GET /api/v1/workspaces/{workspace_uuid}/missions`. Access follows the target twin, with workspace membership/token scope enforced. Definition responses include current environment/workspace context. Discovery does not dispatch an execution.
+Templates already declare `metadata.editable_fields`. These describe saved configuration defaults, **not** a universal runtime input schema. `workflowEditableFields` exposes existing node parameters and literal input mappings, respecting mapping precedence. Reference/expression/caller bindings stay intact. `workflowNodePatch` preserves unrelated configuration and includes the backend edit revision. Missing/optional fields without a declared stored value still require the workflow editor; dynamic per-run inputs must match the actual graph.
 
-Task-sequence Mission records target one twin and inherit its current environment. Workflow records belong to a workspace with an optional environment binding. The mission example shows both stores; they are not automatically paired. A workflow-backed mission can invoke another workflow through the existing Run Workflow node. A task-sequence Mission does not yet have a workflow step.
+To schedule a supported single-entry static workflow, the example changes its existing Manual trigger to Schedule while inactive, keeping its connections. Save a validated cron expression and IANA timezone, then activate. `workflowSchedules` reads the same trigger configuration for the Scheduled view. `workflows.list({environment_uuid, trigger_type: 'schedule'})` also works with `workspace_uuid`; the API includes paused workflows with enabled schedule nodes. Fully disabled schedule nodes do not match that filter. `deactivate` pauses future runs; cancelling an in-flight execution is separate.
 
-The recommended evolution is one planning interface over the existing workflow engine plus an adapter for task-sequence missions. Keep reusable definitions separate from run requests and execution results. Add correlated child completion, cancellation and durable scheduling before exposing arbitrary composition. Trigger acceptance is not completion. For multiple environments, use explicit step targets within one workspace and immutable execution context; do not duplicate a plan per environment.
+Writes in the example require an authenticated **local** API connection. Production/custom remote connections remain read-only in this development gateway. The SDK itself can call any configured API under its own authorization rules. Mutations are never automatically retried. A failed multi-request configuration can leave an inactive partial draft: reload it before retrying. The example does not guarantee transactional graph edits or execution idempotency.
 
-Scalability limits are explicit: the new Mission views paginate on the server; the old per-twin fallback and existing workflow listing are not suitable for large aggregate catalogs. Workflow display pages in the example do not bound API response size. A bounded server-side planning catalog is the next increment. A unified planning execution API is a proposal, not an exported SDK feature.
+The monitor polls history and the selected run every five seconds, suspends requests in hidden tabs, aborts on scope changes and stops on errors. It displays backend status rather than inventing completion. Scheduled workflows show cron/timezone, target defaults, runtime and enabled/paused state. Cron is recurring, not a one-off reservation or guaranteed start time; existing catch-up, concurrency and runtime availability rules apply.
+
+### Boundaries and next increments
+
+- A workflow belongs to a workspace and may bind one environment. Multi-environment activity needs explicit step targets and supported adapters.
+- Existing lists are scoped but unpaginated; UI display pages do not bound server work. Add backend pagination before large-scale governance.
+- Durable one-off scheduling, atomic due-slot claims/recovery, correlated child completion/cancellation and exclusive resource allocation remain backend work. They should extend workflows rather than introduce a parallel planning engine.
+- “Dynamic workflow” can describe runtime composition in a product, but does not imply arbitrary dynamic target support: some edge actions require targets fixed before compilation.
+
+### Legacy mission compatibility
+
+Existing task-sequence Mission APIs remain accessible through `client.missions` and `client.environments.missions`; their paginated environment/workspace discovery requires the development extension. They are not automatically paired with workflows. New planning in example 11 uses workflows only. Preserve existing consumers and history until migration semantics are verified. Inspection campaigns and recordings remain separate evidence resources.
 
 ## Development inspection extension
 
@@ -50,7 +44,7 @@ The branch backend persists four records: **campaign → observation → review 
 
 Use `client.inspections.list/get/importCampaign/history/review`. Manifests contain evidence identifiers, measurements/uncertainty, localization and model provenance; importing does not fetch URLs or upload videos. Delivery acceptance, resumable video ingestion, complete AI-run parameters, defect merges, maintenance synchronization, verified resolution, signed reports and retention policy remain later increments.
 
-These additive endpoints are **development features**, not a claim about production deployment. Their OpenAPI fragment is exported from the backend into `schema/extensions.openapi.json` and generated into `src/generated/extensions.ts`, separate from the pinned production schema. Refresh with `pnpm generate --extensions-from=/absolute/path/to/backend-openapi.json`. Older servers can return 404; the mission example falls back to per-twin reads, and the inspection panel explains unavailability. The example gateway permits only explicit inspection metadata POSTs on authenticated localhost connections; device command routes remain separate.
+These additive endpoints are **development features**, not a claim about production deployment. Their OpenAPI fragment is exported from the backend into `schema/extensions.openapi.json` and generated into `src/generated/extensions.ts`, separate from the pinned production schema. Refresh with `pnpm generate --extensions-from=/absolute/path/to/backend-openapi.json`. Older servers can return 404; the inspection panel explains unavailability. The example gateway permits allowlisted inspection metadata and workflow operations on authenticated localhost connections; telecontrol routes retain their separate configured target.
 
 The official [`cyberwave`](https://www.npmjs.com/package/cyberwave) package for Node.js and browser applications, with optional React components and a 3D renderer. This is the next increment of [cyberwave-node](https://github.com/cyberwave-os/cyberwave-node), retaining its package identity and Apache-2.0 license.
 
@@ -60,7 +54,7 @@ The official [`cyberwave`](https://www.npmjs.com/package/cyberwave) package for 
 
 | Package | Responsibility |
 | --- | --- |
-| `cyberwave` | Generated OpenAPI types + typed Fetch transport; authentication injection, catalog/environment, mission and recording read helpers and scene loading. No React or 3D dependency. |
+| `cyberwave` | Generated OpenAPI types + typed Fetch transport; authentication injection, catalog/environment, workflow configuration/run helpers, legacy mission and recording read helpers and scene loading. No React or 3D dependency. |
 | `@cyberwave/react` | `CyberwaveProvider`, `useCyberwave`, `useEnvironment`, `ConnectionPanel`, `EnvironmentBrowser`, `AssetBrowser`, `EnvironmentSummary`, `RecordingBrowser`, `useRecordingPlayback`, `RecordingVideo`; opt-in CSS tokens. |
 | `@cyberwave/environment-3d` | Read-only Three.js renderer for actual GLB and URDF models, meshes, measured poses and joints; orbit, fit and selection. No command transport. |
 

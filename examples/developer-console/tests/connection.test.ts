@@ -102,3 +102,21 @@ test('video byte ranges preserve 206 and never forward API credentials',async()=
     assert.equal(response.status,206);assert.equal(response.headers.get('content-range'),'bytes 0-3/100');assert.equal(await response.text(),'test');
   });
 });
+
+test('workflow writes require a local authenticated session and origin; errors remain actionable',async()=>{
+ const calls=[];
+ await run(async(url,opts)=>{calls.push({url:String(url),opts});return Response.json({detail:'Node changed. Reload.'},{status:409});},async request=>{
+  await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com',token:'remote'});
+  assert.equal((await request('/gateway/rest/api/v1/workflows/w/activate','POST')).status,405);
+  await request('/gateway/connection','POST',{baseUrl:'http://localhost:8000'});
+  assert.equal((await request('/gateway/rest/api/v1/workflows/w/nodes/n','PUT',{},'')).status,403);
+  const result=await request('/gateway/rest/api/v1/workflows/w/nodes/n','PUT',{expected_updated_at:'r1'});
+  assert.equal(result.status,409);assert.equal((await result.json()).detail,'Node changed. Reload.');
+  assert.equal((await request('/gateway/rest/api/v1/workflows/w/clone','PUT',{})).status,405);
+  assert.equal((await request('/gateway/rest/api/v1/workflows/w','POST',{})).status,405);
+  await request('/gateway/rest/api/v1/workflows/w/execute','POST',{});
+  await request('/gateway/rest/api/v1/workflows/executions/run/cancel','POST');
+  await request('/gateway/rest/api/v1/workflows/w/executions/run');
+  assert.equal(calls.length,4);
+ });
+});

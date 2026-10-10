@@ -64,7 +64,7 @@ export function createGateway(settings, fetchApi = fetch) {
       if (![ `127.0.0.1:${req.socket.localPort}`, `localhost:${req.socket.localPort}` ].includes(host))
         return send(403, { detail: 'Local host required.' });
       const origin = req.headers.origin;
-      if ((origin && origin !== 'http://127.0.0.1:5173') || (['POST', 'DELETE'].includes(req.method) && !origin))
+      if ((origin && origin !== 'http://127.0.0.1:5173') || (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !origin))
         return send(403, { detail: 'Use the local application origin.' });
       const url = new URL(req.url, 'http://127.0.0.1:8787');
       if (await connections(req, res, url, send)) return;

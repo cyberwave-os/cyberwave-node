@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import type { CyberwaveClient, Workflow, WorkflowExecution } from "cyberwave";
-
-/** A separate projection of the existing engine, not a second plan store. */
+import { useEffect, useRef, useState } from "react";
+import { type CyberwaveClient, type Workflow } from "cyberwave";
+import { WorkflowPlanner } from "./workflow-planner.tsx";
+import { workflowError } from "./workflow-monitor.tsx";
 export function WorkflowCatalog({
   client,
   environmentId,
@@ -11,128 +11,153 @@ export function WorkflowCatalog({
   environmentId?: string;
   workspaceId?: string;
 }) {
-  const [rows, setRows] = useState<Workflow[]>([]);
-  const [selected, setSelected] = useState<Workflow>();
-  const [runs, setRuns] = useState<WorkflowExecution[]>([]);
-  const [status, setStatus] = useState(
-    "Choose a scope to discover workflow plans.",
-  );
-  const [runStatus, setRunStatus] = useState("");
-  const [page, setPage] = useState(0);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [templates, setTemplates] = useState<
-    Awaited<ReturnType<CyberwaveClient["workflows"]["templates"]>>
-  >([]);
-  const [templateStatus, setTemplateStatus] = useState("");
-  useEffect(() => {
-    if (!showTemplates) return;
-    const abort = new AbortController();
-    setTemplates([]);
-    setTemplateStatus("Loading templates…");
-    client.workflows
-      .templates({ signal: abort.signal })
-      .then((items) => {
-        if (!abort.signal.aborted) {
-          setTemplates(items);
-          setTemplateStatus(
-            `${items.length} available templates. Templates are listed by their own access rules, independently of the selected environment.`,
-          );
-        }
-      })
-      .catch((error) => {
-        if (!abort.signal.aborted) setTemplateStatus(error.message);
-      });
-    return () => abort.abort();
-  }, [client, showTemplates]);
+  const selection = useRef<AbortController | undefined>(undefined);
+  useEffect(() => () => selection.current?.abort(), []);
+  const [rows, setRows] = useState<Workflow[]>([]),
+    [selected, setSelected] = useState<Workflow>();
+  const [templates, setTemplates] = useState<Workflow[]>([]),
+    [showTemplates, setShowTemplates] = useState(false);
+  const [view, setView] = useState<"all" | "scheduled">("all"),
+    [revision, refresh] = useState(0),
+    [page, setPage] = useState(0);
+  const [status, setStatus] = useState("Choose an environment or workspace."),
+    [busy, setBusy] = useState(false);
   useEffect(() => {
     const abort = new AbortController();
+    selection.current?.abort();
+    setBusy(false);
     setRows([]);
     setSelected(undefined);
     setPage(0);
     if (!environmentId && !workspaceId) return;
-    setStatus("Loading workflow plans…");
+    setStatus("Loading workflows…");
     client.workflows
       .list(
-        { environment_uuid: environmentId, workspace_uuid: workspaceId },
+        {
+          environment_uuid: environmentId,
+          workspace_uuid: workspaceId,
+          ...(view === "scheduled" ? { trigger_type: "schedule" } : {}),
+        },
         { signal: abort.signal },
       )
       .then((items) => {
         if (!abort.signal.aborted) {
-          setRows(items);
-          setStatus(items.length + " workflows in this scope.");
-        }
-      })
-      .catch((error) => {
-        if (!abort.signal.aborted) setStatus(error.message);
-      });
-    return () => abort.abort();
-  }, [client, environmentId, workspaceId]);
-  useEffect(() => {
-    const abort = new AbortController();
-    setRuns([]);
-    setRunStatus("");
-    if (!selected) return;
-    setRunStatus("Loading runs…");
-    client.workflows
-      .executions(selected.uuid, { signal: abort.signal })
-      .then((items) => {
-        if (!abort.signal.aborted) {
-          setRuns(items);
-          setRunStatus(
-            items.length ? "Recent backend executions" : "No executions yet.",
+          setRows(items.filter((w) => !w.is_template));
+          setStatus(
+            `${items.filter((w) => !w.is_template).length} ${view === "scheduled" ? "scheduled " : ""}workflows in this scope.`,
           );
         }
       })
-      .catch((error) => {
-        if (!abort.signal.aborted) setRunStatus(error.message);
+      .catch((e) => {
+        if (!abort.signal.aborted) setStatus(workflowError(e));
       });
     return () => abort.abort();
-  }, [client, selected]);
+  }, [client, environmentId, workspaceId, revision, view]);
+  useEffect(() => {
+    if (!showTemplates) return;
+    const abort = new AbortController();
+    client.workflows
+      .templates({ signal: abort.signal })
+      .then((items) => {
+        if (!abort.signal.aborted) setTemplates(items);
+      })
+      .catch((e) => {
+        if (!abort.signal.aborted) setStatus(workflowError(e));
+      });
+    return () => abort.abort();
+  }, [client, showTemplates]);
+  async function select(uuid: string) {
+    selection.current?.abort();
+    const abort = new AbortController();
+    selection.current = abort;
+    setBusy(true);
+    setSelected(undefined);
+    try {
+      const workflow = await client.workflows.get(uuid, {
+        signal: abort.signal,
+      });
+      if (!abort.signal.aborted) setSelected(workflow);
+    } catch (e) {
+      if (!abort.signal.aborted) setStatus(workflowError(e));
+    } finally {
+      if (!abort.signal.aborted) setBusy(false);
+    }
+  }
   return (
-    <section className="section-gap">
-      <h2>Workflows & runs</h2>
-      <button
-        className="cw-button"
-        onClick={() => setShowTemplates(!showTemplates)}
-      >
-        {showTemplates ? "Hide templates" : "Browse workflow templates"}
-      </button>
-      {showTemplates && (
-        <>
-          <p className="status-line">{templateStatus}</p>
-          <div className="comparison">
-            {templates.slice(0, 20).map((template) => (
-              <article key={template.uuid}>
-                <h3>{template.name}</h3>
-                <p>{template.description}</p>
-              </article>
-            ))}
-          </div>
-          <p className="compact muted">
-            Showing at most 20 templates from the existing unpaginated API. This
-            browser does not clone or execute them.
-          </p>
-        </>
-      )}
+    <section>
+      <h2>Workflows</h2>
+      <div className="toolbar">
+        <button
+          className="cw-button"
+          aria-pressed={view === "all"}
+          onClick={() => setView("all")}
+        >
+          All workflows
+        </button>
+        <button
+          className="cw-button"
+          aria-pressed={view === "scheduled"}
+          onClick={() => setView("scheduled")}
+        >
+          Scheduled
+        </button>
+        <button
+          className="cw-button"
+          onClick={() => {
+            setView("all");
+            setShowTemplates(!showTemplates);
+          }}
+        >
+          Choose template
+        </button>
+        <button
+          className="cw-button"
+          disabled={busy}
+          onClick={() => refresh(revision + 1)}
+        >
+          Refresh
+        </button>
+      </div>
       <p className="status-line" role="status">
         {status}
       </p>
+      {view === "scheduled" && (
+        <p className="note">
+          Recurring workflows for this scope, including paused workflows. Select
+          one to see timing, configured inputs and runs. Times describe intent;
+          availability and concurrency can delay execution.
+        </p>
+      )}
+      {showTemplates && (
+        <div className="cw-resource-list">
+          {templates.map((template) => (
+            <button
+              className="cw-resource"
+              key={template.uuid}
+              disabled={busy}
+              onClick={() => select(template.uuid)}
+            >
+              <span>
+                <strong>{template.name}</strong>
+                <small>{template.description}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="cw-resource-list">
-        {rows.slice(page * 20, page * 20 + 20).map((workflow) => (
+        {rows.slice(page * 20, page * 20 + 20).map((w) => (
           <button
-            key={workflow.uuid}
-            className={
-              "cw-resource " +
-              (selected?.uuid === workflow.uuid ? "cw-selected" : "")
-            }
-            onClick={() => setSelected(workflow)}
+            className="cw-resource"
+            key={w.uuid}
+            disabled={busy}
+            onClick={() => select(w.uuid)}
           >
             <span>
-              <strong>{workflow.name}</strong>
+              <strong>{w.name}</strong>
               <small>
-                {workflow.run_on_edge ? "Edge" : "Cloud"} ·{" "}
-                {workflow.is_active ? "Active" : "Draft"} ·{" "}
-                {workflow.environment_name || "Workspace automation"}
+                {w.is_active ? "Active" : "Draft / paused"} ·{" "}
+                {w.execution_target} · {w.run_on_edge ? "Edge" : "Cloud"}
               </small>
             </span>
           </button>
@@ -142,10 +167,10 @@ export function WorkflowCatalog({
         <div className="toolbar">
           <button
             className="cw-button"
-            disabled={page === 0}
+            disabled={!page}
             onClick={() => setPage(page - 1)}
           >
-            Previous workflows
+            Previous
           </button>
           <span>Page {page + 1}</span>
           <button
@@ -153,30 +178,32 @@ export function WorkflowCatalog({
             disabled={(page + 1) * 20 >= rows.length}
             onClick={() => setPage(page + 1)}
           >
-            Next workflows
+            Next
           </button>
         </div>
       )}
       {selected && (
-        <>
-          <h3>{selected.name} · runs</h3>
-          <p>{selected.description}</p>
-          <p className="compact muted">{runStatus}</p>
-          {runs.map((run) => (
-            <article className="note" key={run.uuid}>
-              <strong>{run.status}</strong> ·{" "}
-              {new Date(run.started_at).toLocaleString()}
-              <br />
-              <small>{run.uuid}</small>
-            </article>
-          ))}
-        </>
+        <WorkflowPlanner
+          key={selected.uuid}
+          client={client}
+          workflow={selected}
+          environmentId={environmentId}
+          workspaceId={workspaceId}
+          onChange={(w) => {
+            setSelected(w);
+            setRows((old) => old.map((row) => (row.uuid === w.uuid ? w : row)));
+          }}
+          onCreated={(w) => {
+            setStatus("Draft created. Configure its inputs before activation.");
+            setRows((old) => [w, ...old]);
+            setSelected(w);
+            setShowTemplates(false);
+          }}
+        />
       )}
-      <p className="note">
-        Existing API: GET /workflows with environment_uuid or workspace_uuid.
-        This endpoint currently returns the complete scoped list; these display
-        pages do not bound backend work. Server pagination and a unified run
-        index are the next governance increment.
+      <p className="compact muted">
+        The existing scoped list API is unpaginated. This example displays 20
+        workflows per page and loads only the selected graph.
       </p>
     </section>
   );

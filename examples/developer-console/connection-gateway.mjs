@@ -1,4 +1,4 @@
-/** Development BFF: remote reads, explicit local inspection metadata writes. */
+/** Development BFF: remote reads, explicit local inspection and workflow writes. */
 import { randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { normalizeApiUrl } from 'cyberwave';
@@ -7,7 +7,9 @@ const allowed = /^\/api\/v1\/(assets(?:\/[a-zA-Z0-9-]+)?|environments(?:\/[a-zA-
 const inspectionRead = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:missions|inspection-campaigns(?:\/[a-zA-Z0-9-]+)?|inspection-defects\/[a-zA-Z0-9-]+\/observations)$/;
 const inspectionWrite = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:inspection-campaigns|inspection-observations\/[a-zA-Z0-9-]+\/reviews)$/;
 const governanceRead = /^\/api\/v1\/workspaces\/[a-zA-Z0-9-]+\/missions$/;
-const workflowRead = /^\/api\/v1\/workflows(?:\/[a-zA-Z0-9-]+(?:\/executions)?)?$/;
+const workflowCommand = /^\/api\/v1\/workflows\/(?:[a-zA-Z0-9-]+\/(?:clone|activate|deactivate|execute)|executions\/[a-zA-Z0-9-]+\/cancel)$/;
+const workflowEdit = /^\/api\/v1\/workflows\/[a-zA-Z0-9-]+(?:\/nodes\/[a-zA-Z0-9-]+)?$/;
+const workflowRead = /^\/api\/v1\/workflows(?:\/[a-zA-Z0-9-]+(?:\/executions(?:\/[a-zA-Z0-9-]+)?)?)?$/;
 export function createConnectionGateway({ localToken, localOrigin = 'http://localhost:8000' } = {}, transport = fetch) {
   const sessions = new Map();
   function registerResources(data, session) {
@@ -57,12 +59,19 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
       let body;
       if (req.method !== 'GET') {
         const local = ['localhost','127.0.0.1','[::1]'].includes(new URL(session.origin).hostname);
-        if (req.method !== 'POST' || !local || !session.token || !inspectionWrite.test(path)) { send(405, { detail: 'Only authenticated local inspection metadata writes are enabled.' }); return true; }
-        body = ''; for await (const chunk of req) { body += chunk; if (Buffer.byteLength(body) > 1024*1024) { send(413,{detail:'Inspection manifest too large'}); return true; } }
-        JSON.parse(body);
+        const permitted =
+          (req.method === 'POST' && (inspectionWrite.test(path) || workflowCommand.test(path))) ||
+          (req.method === 'PUT' && workflowEdit.test(path));
+        if (!permitted || !local || !session.token) { send(405, { detail: 'Only authenticated local inspection and workflow writes are enabled.' }); return true; }
+        body = ''; for await (const chunk of req) { body += chunk; if (Buffer.byteLength(body) > 1024*1024) { send(413,{detail:'Request body too large'}); return true; } }
+        if (body) JSON.parse(body); else body = undefined;
       } else if (!allowed.test(path) && !inspectionRead.test(path) && !governanceRead.test(path) && !workflowRead.test(path)) { send(403, { detail: 'Unsupported read operation' }); return true; }
       const upstream = await transport(new URL(path + url.search, session.origin), { method:req.method, body, redirect: 'error', signal: AbortSignal.timeout(20000), headers: { ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}), ...(body ? {'Content-Type':'application/json'} : {}) } });
-      if (!upstream.ok) { send(upstream.status, { detail: upstream.status===409?'Conflict: reload the latest revision or use a new campaign identifier.':`Cyberwave returned ${upstream.status}` }); return true; }
+      if (!upstream.ok) {
+        const error = await upstream.json().catch(() => ({}));
+        const detail = typeof error.detail === 'string' ? error.detail.slice(0, 2000) : `Cyberwave returned ${upstream.status}`;
+        send(upstream.status, { detail }); return true;
+      }
       const data = await upstream.json(); registerResources(data, session); send(upstream.status, data); return true;
     }
     if (req.method !== 'GET') { send(405, { detail: 'This resource is read-only.' }); return true; }

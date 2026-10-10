@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { MissionCatalog } from "./mission-catalog.tsx";
+import { WorkflowWorkbench } from "./workflow-workbench.tsx";
 import { ConnectedWorkbench, downloadJson } from "./workbench-connection.tsx";
 import {
   aerialPreview,
@@ -383,7 +383,7 @@ function App() {
       <section className="section-gap">
         <h2>Connect your existing Cyberwave missions</h2>
         <ConnectedWorkbench>
-          {(client) => <MissionCatalog key={client.baseUrl} client={client} />}
+          {(client) => <WorkflowWorkbench key={client.baseUrl} client={client} />}
         </ConnectedWorkbench>
       </section>
     </main>
