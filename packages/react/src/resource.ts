@@ -1,5 +1,21 @@
 import { useEffect, useState } from "react";
 
+/** Reset a resource subtree before committing a different client or record.
+ * React keys also dispose its pending effects and local mutation state.
+ */
+export function useResourceKey(...scope: unknown[]): number {
+  const [current, setCurrent] = useState({ scope, key: 0 });
+  if (
+    scope.length !== current.scope.length ||
+    scope.some((value, index) => value !== current.scope[index])
+  ) {
+    const key = current.key + 1;
+    setCurrent({ scope, key });
+    return key;
+  }
+  return current.key;
+}
+
 export type Resource<T> = { data?: T; loading: boolean; error?: Error };
 export function useResource<T>(
   load: (signal: AbortSignal) => Promise<T>,

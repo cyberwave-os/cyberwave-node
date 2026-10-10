@@ -196,6 +196,8 @@ import '@cyberwave/react/styles.css';
 
 `WorkflowPlanner`, `WorkflowMonitor` and `InspectionVerificationPanel` are also exported individually. Components default to read-only and have no hostname restriction; the example wrapper restricts writes to its local backend. Backend ACLs remain authoritative. Run/trigger requests now require workflow write access and recheck the existing actuation-target guard. Reader accounts can browse and monitor.
 
+Keep the client instance stable while its connection is unchanged. `WorkflowMonitor` resets its selection and pending UI state when the client or workflow ID changes. Asset/environment browsers reset their search and pagination when the provider client changes; recording cursors reset on client or environment changes. Consumers can switch these resources without adding their own remount keys. Application-owned drafts still belong to the host application.
+
 ```ts
 const contract = await client.workflows.inputContract(workflowId);
 const page = await client.workflows.list({ workspace_uuid: workspaceId, limit: 20, offset: 0 });
@@ -220,6 +222,19 @@ The verification component selects stored evidence and appends this review with 
 Workflow catalogs use the existing `is_template=false` list filter before server pagination when available. Keep `serverPagination` disabled for older deployments that ignore pagination/filter parameters. Typed input patches compare the input contract's exact node revision and preserve static/dynamic binding ownership; reload the configuration after a conflict. The SDK does not introduce another mission or schedule store.
 
 ## Evidence and workspace governance recipes
+
+`client.datasets` and `client.humanActions` are thin helpers over generated requests, sharing the same authentication, abort signals and `CyberwaveError` handling as workflow helpers. The annotation and human-review examples use them directly:
+
+```ts
+const actions = await client.humanActions.list({ workspace_uuid: workspaceId });
+await client.humanActions.respond(actionId, { decision: 'completed', note: 'Photo collected' });
+const page = await client.datasets.samples(datasetId, { limit: 50 });
+await client.datasets.reviewSample(datasetId, sampleId, {
+  revision: sample.revision, status: 'approved', annotations: reviewedLabels,
+});
+```
+
+`datasets.createCollection`, `appendSample` and `get` cover collection creation, attachment membership and dataset details. Review and response rules remain on the backend; the SDK does not auto-retry mutations. These preview routes need the matching backend. Use `client.rest` for the complete generated API surface.
 
 The [typed integration recipes](examples/recipes/README.md) compose existing generated REST APIs: workspace usage and organization credit reporting, recording-window selection as an Episode, and collection of existing Episodes into a Dataset. They add no new service facade or storage primitive. `pnpm recipes:check` checks these examples during the SDK build.
 

@@ -4,7 +4,7 @@ const Context = createContext<CyberwaveClient | null>(null);
 export function CyberwaveProvider({ client, children }: { client: CyberwaveClient; children: ReactNode }) { return <Context.Provider value={client}>{children}</Context.Provider>; }
 export function useCyberwave() { const client = useContext(Context); if (!client) throw new Error('Wrap Cyberwave components in CyberwaveProvider.'); return client; }
 export type { Resource } from "./resource.js";
-import { useResource, type Resource } from "./resource.js";
+import { useResource, useResourceKey, type Resource } from "./resource.js";
 export function useEnvironment(uuid: string): Resource<EnvironmentSnapshot> {
   const client = useCyberwave();
   return useResource(useMemo(() => (signal: AbortSignal) => client.loadEnvironment(uuid, { signal }), [client, uuid]));
@@ -52,8 +52,14 @@ function Browser<T extends Environment | Asset>({ kind, onSelect, selectedId, re
     <div className="cw-pagination"><button className="cw-button" disabled={offset === 0 || state.loading} onClick={() => setOffset(Math.max(0, offset - 12))}>Previous</button><span>Page {offset / 12 + 1}</span><button className="cw-button" disabled={state.loading || (state.data?.length ?? 0) < 12} onClick={() => setOffset(offset + 12)}>Next</button></div>
   </div>;
 }
-export function EnvironmentBrowser(props: { onSelect: (environment: Environment) => void; selectedId?: string; resolveResource?: (url: string) => string }) { return <Browser<Environment> kind="environments" {...props} />; }
-export function AssetBrowser(props: { onSelect: (asset: Asset) => void; selectedId?: string; resolveResource?: (url: string) => string }) { return <Browser<Asset> kind="assets" {...props} />; }
+export function EnvironmentBrowser(props: { onSelect: (environment: Environment) => void; selectedId?: string; resolveResource?: (url: string) => string }) {
+  const key = useResourceKey(useCyberwave());
+  return <Browser<Environment> key={key} kind="environments" {...props} />;
+}
+export function AssetBrowser(props: { onSelect: (asset: Asset) => void; selectedId?: string; resolveResource?: (url: string) => string }) {
+  const key = useResourceKey(useCyberwave());
+  return <Browser<Asset> key={key} kind="assets" {...props} />;
+}
 export function EnvironmentSummary({ snapshot }: { snapshot: EnvironmentSnapshot }) {
   return <section className="cw-summary"><span className="cw-eyebrow">Environment loaded</span><h2>{snapshot.environment.name}</h2><p>{snapshot.environment.description || 'Ready for your custom application.'}</p>
     <div className="cw-metrics"><span><strong>{snapshot.twins.length}</strong> twins</span><span><strong>{snapshot.objects.filter(x => x.model).length}</strong> renderable</span></div>
@@ -62,8 +68,8 @@ export function EnvironmentSummary({ snapshot }: { snapshot: EnvironmentSnapshot
 }
 
 export function RecordingBrowser({ environmentUuid, onSelect, selectedId }: { environmentUuid: string; onSelect: (recording: import('cyberwave').Recording) => void; selectedId?: string }) {
-  // Reset pagination when the environment changes, including within one provider.
-  return <RecordingPage key={environmentUuid} environmentUuid={environmentUuid} onSelect={onSelect} selectedId={selectedId} />;
+  const key = useResourceKey(useCyberwave(), environmentUuid);
+  return <RecordingPage key={key} environmentUuid={environmentUuid} onSelect={onSelect} selectedId={selectedId} />;
 }
 function RecordingPage({ environmentUuid, onSelect, selectedId }: { environmentUuid: string; onSelect: (recording: import('cyberwave').Recording) => void; selectedId?: string }) {
   const client = useCyberwave(), [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);

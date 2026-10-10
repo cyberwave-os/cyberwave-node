@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  CyberwaveError,
   type CyberwaveClient,
   type HumanAction,
   type DatasetSample,
@@ -72,14 +71,11 @@ function HumanEvidence({ client }: { client: CyberwaveClient }) {
   const [selected, setSelected] = useState<HumanAction>();
 
   async function loadActions(signal?: AbortSignal) {
-    const result = await client.rest.GET("/api/v1/workflow-actions", {
-      signal,
-    });
-    if (!result.response.ok)
-      throw new CyberwaveError(result.response.status, result.error);
-    setActions(result.data!);
+    const actions = await client.humanActions.list({}, { signal });
+    if (signal?.aborted) return;
+    setActions(actions);
     setSelected((current) =>
-      result.data!.find((action) => action.uuid === current?.uuid),
+      actions.find((action) => action.uuid === current?.uuid),
     );
   }
   useEffect(() => {
@@ -102,25 +98,12 @@ function HumanEvidence({ client }: { client: CyberwaveClient }) {
   }
   async function respond(decision: "approved" | "rejected" | "completed") {
     if (!selected) return;
-    const result = await client.rest.POST(
-      "/api/v1/workflow-actions/{uuid}/respond",
-      {
-        params: { path: { uuid: selected.uuid } },
-        body: { decision, note },
-      },
-    );
-    if (!result.response.ok)
-      throw new CyberwaveError(result.response.status, result.error);
-    setSelected(result.data!);
+    setSelected(await client.humanActions.respond(selected.uuid, { decision, note }));
     await loadActions();
   }
   async function loadSamples() {
-    const result = await client.rest.GET("/api/v1/datasets/{uuid}/samples", {
-      params: { path: { uuid: dataset.trim() }, query: { limit: 100 } },
-    });
-    if (!result.response.ok)
-      throw new CyberwaveError(result.response.status, result.error);
-    setSamples(result.data!.items);
+    const page = await client.datasets.samples(dataset.trim(), { limit: 100 });
+    setSamples(page.items);
     setLoaded(true);
   }
   return (

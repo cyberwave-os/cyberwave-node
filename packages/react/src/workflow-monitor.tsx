@@ -5,6 +5,7 @@ import {
   type Workflow,
   type WorkflowExecution,
 } from "cyberwave";
+import { useResourceKey } from "./resource.js";
 export function workflowError(error: unknown) {
   return error instanceof CyberwaveError &&
     typeof error.detail === "object" &&
@@ -15,17 +16,22 @@ export function workflowError(error: unknown) {
       ? error.message
       : String(error);
 }
-export function WorkflowMonitor({
-  client,
-  workflow,
-  readOnly = true,
-  serverPagination = false,
-}: {
+type WorkflowMonitorProps = {
   client: CyberwaveClient;
   readOnly?: boolean;
   serverPagination?: boolean;
   workflow: Workflow;
-}) {
+};
+export function WorkflowMonitor(props: WorkflowMonitorProps) {
+  const key = useResourceKey(props.client, props.workflow.uuid);
+  return <ExecutionMonitor key={key} {...props} />;
+}
+function ExecutionMonitor({
+  client,
+  workflow,
+  readOnly = true,
+  serverPagination = false,
+}: WorkflowMonitorProps) {
   const [page, setPage] = useState(0);
   const [runs, setRuns] = useState<WorkflowExecution[]>([]),
     [detail, setDetail] = useState<WorkflowExecution>(),

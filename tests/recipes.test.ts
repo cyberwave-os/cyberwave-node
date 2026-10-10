@@ -1,10 +1,50 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCyberwave, CyberwaveError } from '../dist/index.js';
-import { collectEpisodes, selectEpisode } from '../examples/recipes/evidence.ts';
+import { collectEpisodes, selectEpisode, approvedEvidence, appendEvidence } from '../examples/recipes/evidence.ts';
+import { listHumanActions, respondToAction } from '../examples/recipes/human-actions.ts';
 import { readWorkspaceGovernance } from '../examples/recipes/governance.ts';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+
+test('reviewed evidence keeps the server cursor and stops on a review conflict without retrying', async () => {
+  const requests: Request[] = [];
+  const client = createCyberwave({ fetch: async input => {
+    const request = input as Request; requests.push(request);
+    const url = new URL(request.url);
+    if (url.pathname.endsWith('/review')) return json({ detail: 'Reload the sample' }, 409);
+    if (request.method === 'POST') return json({ uuid: 'sample', review_status: 'pending', revision: 1 });
+    return url.searchParams.get('after') === '0'
+      ? json({ items: [{ uuid: 'first' }], next_after: 42 })
+      : json({ items: [{ uuid: 'last' }], next_after: null });
+  } });
+  const sample = await appendEvidence(client, 'dataset', 'attachment');
+  assert.equal(sample.review_status, 'pending');
+  assert.deepEqual(await requests[0].json(), { attachment_uuid: 'attachment' });
+  const ids: string[] = [];
+  for await (const item of approvedEvidence(client, 'dataset')) ids.push(item.uuid);
+  assert.deepEqual(ids, ['first', 'last']);
+  assert.equal(new URL(requests[2].url).searchParams.get('after'), '42');
+  assert.equal(new URL(requests[2].url).searchParams.get('approved_only'), 'true');
+  await assert.rejects(client.datasets.reviewSample('dataset', sample.uuid, { revision: 1, status: 'approved', annotations: [] }), (error: unknown) => error instanceof CyberwaveError && error.status === 409);
+  assert.equal(requests.length, 4);
+});
+
+test('human action helpers preserve scope, abort signals and backend response status', async () => {
+  const requests: Request[] = [];
+  const controller = new AbortController();
+  const client = createCyberwave({ fetch: async input => {
+    const request = input as Request; requests.push(request);
+    return request.method === 'GET' ? json([{ uuid: 'action', status: 'pending' }]) : json({ uuid: 'action', status: 'responded' });
+  } });
+  const [action] = await listHumanActions(client, 'workspace', controller.signal);
+  const response = await respondToAction(client, action.uuid, { decision: 'completed', note: 'Inspected' }, controller.signal);
+  assert.equal(response.status, 'responded');
+  assert.equal(new URL(requests[0].url).searchParams.get('workspace_uuid'), 'workspace');
+  assert.deepEqual(await requests[1].json(), { decision: 'completed', note: 'Inspected' });
+  controller.abort();
+  assert.ok(requests.every(request => request.signal.aborted));
+});
 
 test('dataset collection preserves accepted failed rows and never recreates Episodes or retries', async () => {
   const requests: Request[] = [];

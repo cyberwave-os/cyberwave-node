@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  CyberwaveError,
   type CyberwaveClient,
   type DatasetSample,
   type SampleAnnotation,
@@ -74,12 +73,8 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
     }
   }
   async function loadSample() {
-    const response = await client.rest.GET("/api/v1/datasets/{uuid}/samples", {
-      params: { path: { uuid: dataset.trim() }, query: { limit: 1 } },
-    });
-    if (!response.response.ok)
-      throw new CyberwaveError(response.response.status, response.error);
-    const sample = response.data!.items[0];
+    const page = await client.datasets.samples(dataset.trim(), { limit: 1 });
+    const sample = page.items[0];
     if (!sample?.file_url)
       throw new Error("No readable unchanged sample found in this collection.");
     choose({
@@ -91,23 +86,17 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
   }
   async function approve() {
     if (!source?.sample || !source.dataset) return;
-    const response = await client.rest.POST(
-      "/api/v1/datasets/{uuid}/samples/{sample_uuid}/review",
+    const sample = await client.datasets.reviewSample(
+      source.dataset,
+      source.sample.uuid,
       {
-        params: {
-          path: { uuid: source.dataset, sample_uuid: source.sample.uuid },
-        },
-        body: {
-          revision: source.sample.revision,
-          status: "approved",
-          annotations: draft,
-        },
+        revision: source.sample.revision,
+        status: "approved",
+        annotations: draft,
       },
     );
-    if (!response.response.ok)
-      throw new CyberwaveError(response.response.status, response.error);
-    setSource({ ...source, sample: response.data! });
-    setNotice(`Reviewed labels saved · revision ${response.data!.revision}`);
+    setSource({ ...source, sample });
+    setNotice(`Reviewed labels saved · revision ${sample.revision}`);
   }
   async function run() {
     if (!source || !action) return;

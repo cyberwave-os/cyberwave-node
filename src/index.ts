@@ -108,6 +108,20 @@ export function createCyberwave(options: ClientOptions = {}) {
     get: (twin_uuid: string, uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{twin_uuid}/missions/{uuid}', { params: { path: { twin_uuid, uuid } }, ...opts })),
     executions: (twin_uuid: string, uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{twin_uuid}/missions/{uuid}/executions', { params: { path: { twin_uuid, uuid } }, ...opts })),
   };
+  /** Preview media collections reuse Dataset and Attachment; no separate evidence store. */
+  const datasets = {
+    get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/datasets/{uuid}', { params: { path: { uuid } }, ...opts })),
+    createCollection: (body: ExtensionComponents['schemas']['SampleCollectionInput'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/datasets/collections', { body, ...opts })),
+    samples: (uuid: string, query: NonNullable<paths['/api/v1/datasets/{uuid}/samples']['get']['parameters']['query']> = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/datasets/{uuid}/samples', { params: { path: { uuid }, query }, ...opts })),
+    appendSample: (uuid: string, body: ExtensionComponents['schemas']['SampleAppendInput'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/datasets/{uuid}/samples', { params: { path: { uuid } }, body, ...opts })),
+    reviewSample: (uuid: string, sample_uuid: string, body: ExtensionComponents['schemas']['SampleReviewInput'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/datasets/{uuid}/samples/{sample_uuid}/review', { params: { path: { uuid, sample_uuid } }, body, ...opts })),
+  };
+  /** Assignee-scoped interactions with paused workflow nodes, owned by the backend. */
+  const humanActions = {
+    list: (query: NonNullable<paths['/api/v1/workflow-actions']['get']['parameters']['query']> = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflow-actions', { params: { query }, ...opts })),
+    get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflow-actions/{uuid}', { params: { path: { uuid } }, ...opts })),
+    respond: (uuid: string, body: HumanActionResponse, opts: ReadOptions = {}) => data(rest.POST('/api/v1/workflow-actions/{uuid}/respond', { params: { path: { uuid } }, body, ...opts })),
+  };
   /** Existing workflow engine; preview pagination requires the updated backend. */
   const workflows = {
     inputContract: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}/input-contract', {params:{path:{uuid}},...opts})),
@@ -174,7 +188,7 @@ export function createCyberwave(options: ClientOptions = {}) {
     }
     return { environment, twins, objects, warnings };
   }
-  return { baseUrl, rest, environments, assets, missions, workflows, recordings, inspections, loadEnvironment };
+  return { baseUrl, rest, environments, assets, missions, workflows, recordings, inspections, datasets, humanActions, loadEnvironment };
 }
 export type CyberwaveClient = ReturnType<typeof createCyberwave>;
 
