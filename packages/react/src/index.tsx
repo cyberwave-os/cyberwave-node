@@ -93,3 +93,8 @@ export function useRecordingPlayback(environmentUuid: string, recordingUuid: str
 export function RecordingVideo({ src, onTime, onError }: { src: string; onTime?: (seconds: number) => void; onError?: () => void }) {
   return <video key={src} className="cw-recording-video" src={src} controls playsInline preload="metadata" onTimeUpdate={event => onTime?.(event.currentTarget.currentTime)} onError={onError} />;
 }
+
+export { WorkflowCatalog } from './workflow-catalog.js';
+export { WorkflowPlanner } from './workflow-planner.js';
+export { WorkflowMonitor, workflowError } from './workflow-monitor.js';
+export { InspectionVerificationPanel } from './inspection-verification.js';

@@ -4,6 +4,7 @@ import {
   createCyberwave,
   workflowEditableFields,
   workflowNodePatch,
+  workflowInputUpdates,
   workflowSchedules,
   type WorkflowNode,
 } from "../dist/index.js";
@@ -101,5 +102,101 @@ test("workflow mutations use existing endpoints, preserve conflicts, and never r
   assert.equal(
     new URL(requests[4].url).pathname,
     "/api/v1/workflows/executions/run/cancel",
+  );
+});
+
+test("typed backend definitions override value-based inference", () => {
+  const workflow = { metadata: { editable_fields: ["speed"] }, nodes: [node] };
+  const fields = workflowEditableFields(workflow, {
+    workflow_uuid: "workflow",
+    can_edit: true,
+    can_execute: true,
+    fields: [
+      {
+        node_uuid: node.uuid,
+        node_name: "Move",
+        node_updated_at: "revision-1",
+        name: "speed",
+        label: "Speed (m/s)",
+        description: "Configured travel speed",
+        type: "number",
+        allowed_types: ["number"],
+        required: true,
+        options: [],
+        value: 1,
+        source: "parameter",
+      },
+    ],
+  });
+  assert.equal(fields[0].label, "Speed (m/s)");
+  assert.equal(fields[0].type, "number");
+  assert.equal(fields[0].required, true);
+});
+
+test("pagination and contract requests keep generated transport options", async () => {
+  const requests: Request[] = [];
+  const sdk = createCyberwave({
+    baseUrl: "http://localhost:8008",
+    fetch: async (request) => {
+      requests.push(request as Request);
+      return new Response(JSON.stringify([]), {
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+  });
+  const controller = new AbortController();
+  await sdk.workflows.list(
+    { workspace_uuid: "workspace", limit: 20, offset: 40 },
+    { signal: controller.signal },
+  );
+  await sdk.workflows.executions("workflow", {
+    limit: 10,
+    offset: 20,
+    signal: controller.signal,
+  });
+  await sdk.workflows.inputContract("workflow", { signal: controller.signal });
+  assert.equal(new URL(requests[0].url).searchParams.get("offset"), "40");
+  assert.equal(new URL(requests[1].url).searchParams.get("limit"), "10");
+  assert.equal(
+    new URL(requests[2].url).pathname,
+    "/api/v1/workflows/workflow/input-contract",
+  );
+});
+
+test("backend union types and optional nulls are accepted without flattening bindings", () => {
+  const workflow = { metadata: {}, nodes: [node] };
+  const fields = [
+    {
+      nodeId: node.uuid,
+      nodeName: node.name,
+      name: "speed",
+      source: "parameter" as const,
+      value: { x: 1 },
+      type: "object",
+      allowedTypes: ["object", "number"],
+      required: false,
+    },
+  ];
+  assert.equal(
+    workflowInputUpdates(workflow, { [node.uuid + ":speed"]: "3" }, fields)[0]
+      .patch.parameters.speed,
+    3,
+  );
+  assert.equal(
+    workflowInputUpdates(
+      workflow,
+      { [node.uuid + ":speed"]: "null" },
+      fields,
+    )[0].patch.parameters.speed,
+    null,
+  );
+  assert.throws(
+    () =>
+      workflowInputUpdates(
+        workflow,
+        { [node.uuid + ":speed"]: "true" },
+        fields,
+      ),
+    /type object/,
   );
 });

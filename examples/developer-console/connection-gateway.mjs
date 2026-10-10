@@ -9,7 +9,7 @@ const inspectionWrite = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:inspection-
 const governanceRead = /^\/api\/v1\/workspaces\/[a-zA-Z0-9-]+\/missions$/;
 const workflowCommand = /^\/api\/v1\/workflows\/(?:[a-zA-Z0-9-]+\/(?:clone|activate|deactivate|execute)|executions\/[a-zA-Z0-9-]+\/cancel)$/;
 const workflowEdit = /^\/api\/v1\/workflows\/[a-zA-Z0-9-]+(?:\/nodes\/[a-zA-Z0-9-]+)?$/;
-const workflowRead = /^\/api\/v1\/workflows(?:\/[a-zA-Z0-9-]+(?:\/executions(?:\/[a-zA-Z0-9-]+)?)?)?$/;
+const workflowRead = /^\/api\/v1\/workflows(?:\/[a-zA-Z0-9-]+(?:\/(?:input-contract|executions(?:\/[a-zA-Z0-9-]+)?))?)?$/;
 export function createConnectionGateway({ localToken, localOrigin = 'http://localhost:8000' } = {}, transport = fetch) {
   const sessions = new Map();
   function registerResources(data, session) {

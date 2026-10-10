@@ -133,7 +133,7 @@ Technical references: [PX4 fixed-wing mission](https://docs.px4.io/main/en/fligh
 
 [Workflows & schedules](http://127.0.0.1:5173/mission-library.html) is example 11. Choose an environment or workspace, select a template, create an inactive draft, configure its declared inputs and targets, and save. Run now or choose a recurring cron/timezone and enable the schedule. The Scheduled view shows the same workflow definitions; the execution monitor reads real backend runs and node results. Pause a workflow before editing; cancel an active run separately. Configuration writes and execution are available on authenticated loopback connections only. A failed multi-request save may leave an inactive partial draft, so reload before retrying. No automatic mutation retries or new mission model are introduced.
 
-The form reuses `metadata.editable_fields` and existing literal input mappings. Dynamic bindings and multi-entry/event workflows remain in the platform editor. Schedules repeat; one-off execution requests and arbitrary dynamic allocation remain future backend increments. The existing scoped workflow list is unpaginated, so the UI's 20-row pages do not bound server response size. See the [workflow SDK guide](../../README.md#planning-with-workflows) for methods and constraints.
+The form reuses `metadata.editable_fields` and existing literal input mappings. Dynamic bindings and multi-entry/event workflows remain in the platform editor. Schedules repeat; one-off execution requests and arbitrary dynamic allocation remain future backend increments. The updated branch backend supports bounded workflow/history pagination. Local examples request pages from the server; remote compatibility mode retains client pagination. See the [workflow SDK guide](../../README.md#planning-with-workflows) for methods and constraints.
 
 ### Connection and edit consistency
 
@@ -149,3 +149,10 @@ Controller examples retain their own lease ID in tab-scoped session storage so a
 Read the [maintenance integration guide](MAINTENANCE.md). Example 12 reads real branch inspection campaigns and selects only observed findings whose latest review is validated. It retains exact source/review references, supports preventive work without a defect, and reuses `WorkflowCatalog` for template selection, configuration, scheduling and monitoring. Proposals and sample crew reservations are local; exporting is not submission or dispatch.
 
 Example 13 demonstrates a synthetic external work-order inbox: duplicate updates are harmless, stale/conflicting updates require reconciliation, and later source revisions may reopen work. Verification and delivery acceptance are separate. A reviewed finding can resolve while incomplete campaign coverage still requires rework; a complete report can accurately record a persistent defect. It uses the same workflow planner for a verification visit, without inferring business acceptance from run success.
+
+
+### Backend-owned contracts and verification
+
+The workflow catalog/planner/monitor now come from `@cyberwave/react`, including their styles and typed backend input definitions. `cyberwave` owns reusable input parsing/patch helpers and the generated preview contracts. Example code only chooses scope and its local-write policy.
+
+Example 13 also contains **Verify evidence stored in Cyberwave**. Choose an environment, a campaign and a validated finding; select later stored evidence of covered-target absence and save a reasoned resolution. The branch API records the authenticated reviewer, baseline review, optional external order reference and revision. Reload evidence to verify persistence. In the explicitly named **SDK inspection sandbox**, a button imports a clearly labelled synthetic verification visit for local testing. The synthetic inbox at the top remains browser-only and never closes an external order or accepts a campaign.

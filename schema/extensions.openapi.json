@@ -3,9 +3,313 @@
   "info": {
     "title": "Cyberwave development extensions",
     "version": "0.1.0-preview",
-    "description": "Additive endpoints implemented on CYB-4234; deployment availability must be checked separately."
+    "description": "Development endpoints and workflow pagination overrides; deployment availability must be checked separately."
   },
   "paths": {
+    "/api/v1/workflows": {
+      "get": {
+        "operationId": "src_app_api_workflows_list_workflows",
+        "summary": "List Workflows",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workspace Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "environment_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Environment Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "trigger_type",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger Type"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "related_twin_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Related Twin Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "run_on_edge",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run On Edge"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "slug",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Slug"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "List all workflows visible to the authenticated user (respects ACL).",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "src_app_api_workflows_create_workflow",
+        "summary": "Create Workflow",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a new workflow.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflows/{uuid}/input-contract": {
+      "get": {
+        "operationId": "src_app_api_workflows_get_workflow_input_contract",
+        "summary": "Get Workflow Input Contract",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowInputContractSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Typed editable defaults from the existing template metadata and node registry.\n\nPermission flags are hints, not authorization: mutations recheck ACLs and\nruntime preconditions. Dynamic bindings are deliberately excluded.",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflows/{uuid}/executions": {
+      "get": {
+        "operationId": "src_app_api_workflows_list_workflow_executions",
+        "summary": "List Workflow Executions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowExecutionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "List all executions for a workflow.",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
     "/api/v1/environments/{uuid}/inspection-campaigns": {
       "post": {
         "operationId": "src_app_api_inspections_import_inspection_campaign",
@@ -467,6 +771,148 @@
   },
   "components": {
     "schemas": {
+      "WorkflowCreateSchema": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "is_active": {
+            "default": false,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          },
+          "run_on_edge": {
+            "default": false,
+            "title": "Run On Edge",
+            "type": "boolean"
+          },
+          "allow_concurrent_executions": {
+            "default": false,
+            "title": "Allow Concurrent Executions",
+            "type": "boolean"
+          },
+          "concurrency_blocked_by_workflow_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Concurrency Blocked By Workflow Uuids",
+            "type": "array"
+          },
+          "execution_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Target"
+          },
+          "cyberwave_log": {
+            "anyOf": [
+              {
+                "enum": [
+                  "all",
+                  "errors",
+                  "none"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cyberwave Log"
+          },
+          "visibility": {
+            "default": "private",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "is_template": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Template"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "WorkflowCreateSchema",
+        "type": "object"
+      },
       "ImportInspectionCampaignInput": {
         "additionalProperties": false,
         "properties": {
@@ -563,6 +1009,232 @@
           "assessment"
         ],
         "title": "CreateInspectionReviewInput",
+        "type": "object"
+      },
+      "WorkflowSchema": {
+        "description": "Workflow schema.",
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "workspace_uuid": {
+            "title": "Workspace Uuid",
+            "type": "string"
+          },
+          "workspace_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Name"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          },
+          "environment_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Name"
+          },
+          "run_on_edge": {
+            "title": "Run On Edge",
+            "type": "boolean"
+          },
+          "allow_concurrent_executions": {
+            "default": false,
+            "title": "Allow Concurrent Executions",
+            "type": "boolean"
+          },
+          "concurrency_blocked_by_workflow_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Concurrency Blocked By Workflow Uuids",
+            "type": "array"
+          },
+          "execution_target": {
+            "title": "Execution Target",
+            "type": "string"
+          },
+          "cyberwave_log": {
+            "enum": [
+              "all",
+              "errors",
+              "none"
+            ],
+            "title": "Cyberwave Log",
+            "type": "string"
+          },
+          "visibility": {
+            "title": "Visibility",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "is_template": {
+            "default": false,
+            "title": "Is Template",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "has_worker_source_override": {
+            "default": false,
+            "title": "Has Worker Source Override",
+            "type": "boolean"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowNodeSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes"
+          },
+          "connections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowConnectionSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connections"
+          }
+        },
+        "required": [
+          "uuid",
+          "slug",
+          "name",
+          "description",
+          "is_active",
+          "workspace_uuid",
+          "run_on_edge",
+          "execution_target",
+          "cyberwave_log",
+          "visibility",
+          "created_at",
+          "updated_at",
+          "metadata"
+        ],
+        "title": "WorkflowSchema",
+        "type": "object"
+      },
+      "WorkflowInputContractSchema": {
+        "properties": {
+          "workflow_uuid": {
+            "format": "uuid",
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_execute": {
+            "title": "Can Execute",
+            "type": "boolean"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowInputFieldSchema"
+            },
+            "title": "Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "workflow_uuid",
+          "can_edit",
+          "can_execute",
+          "fields"
+        ],
+        "title": "WorkflowInputContractSchema",
         "type": "object"
       },
       "InspectionCampaignDetailSchema": {
@@ -675,6 +1347,121 @@
           "created_at"
         ],
         "title": "InspectionReviewSchema",
+        "type": "object"
+      },
+      "WorkflowExecutionSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "triggered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered By"
+          },
+          "trigger_data": {
+            "additionalProperties": true,
+            "title": "Trigger Data",
+            "type": "object"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "error_message": {
+            "title": "Error Message",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "node_executions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowNodeExecutionSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Executions"
+          },
+          "workflow_name": {
+            "default": "",
+            "title": "Workflow Name",
+            "type": "string"
+          },
+          "workflow_slug": {
+            "default": "",
+            "title": "Workflow Slug",
+            "type": "string"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowExecutionProgressSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowExecutionPendingReasonSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "status",
+          "triggered_by",
+          "trigger_data",
+          "started_at",
+          "finished_at",
+          "error_message",
+          "metadata"
+        ],
+        "title": "WorkflowExecutionSchema",
         "type": "object"
       },
       "InspectionCampaignSchema": {
@@ -879,10 +1666,36 @@
               "stable",
               "worsened",
               "improved",
+              "resolved",
               "not-assessable"
             ],
             "title": "Technical State",
             "type": "string"
+          },
+          "verification_of_review_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Of Review Uuid"
+          },
+          "work_order_reference": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Order Reference"
           }
         },
         "required": [
@@ -919,6 +1732,17 @@
             "default": true,
             "title": "Observed",
             "type": "boolean"
+          },
+          "target_covered": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Covered"
           },
           "chainage_m": {
             "anyOf": [
@@ -1014,6 +1838,423 @@
           "kind"
         ],
         "title": "InspectionObservationInput",
+        "type": "object"
+      },
+      "WorkflowInputFieldSchema": {
+        "properties": {
+          "node_uuid": {
+            "format": "uuid",
+            "title": "Node Uuid",
+            "type": "string"
+          },
+          "node_name": {
+            "title": "Node Name",
+            "type": "string"
+          },
+          "node_updated_at": {
+            "format": "date-time",
+            "title": "Node Updated At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "allowed_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Types",
+            "type": "array"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowInputOptionSchema"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "source": {
+            "enum": [
+              "parameter",
+              "mapping"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_uuid",
+          "node_name",
+          "node_updated_at",
+          "name",
+          "label",
+          "description",
+          "type",
+          "allowed_types",
+          "required",
+          "options",
+          "source"
+        ],
+        "title": "WorkflowInputFieldSchema",
+        "type": "object"
+      },
+      "WorkflowNodeSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node_type": {
+            "title": "Node Type",
+            "type": "string"
+          },
+          "node_subtype": {
+            "title": "Node Subtype",
+            "type": "string"
+          },
+          "trigger_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Type"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "position_x": {
+            "title": "Position X",
+            "type": "number"
+          },
+          "position_y": {
+            "title": "Position Y",
+            "type": "number"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "is_disabled": {
+            "title": "Is Disabled",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "supports_model_task_binding": {
+            "default": false,
+            "title": "Supports Model Task Binding",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "name",
+          "node_type",
+          "node_subtype",
+          "trigger_type",
+          "parameters",
+          "position_x",
+          "position_y",
+          "notes",
+          "is_disabled",
+          "created_at",
+          "updated_at",
+          "metadata"
+        ],
+        "title": "WorkflowNodeSchema",
+        "type": "object"
+      },
+      "WorkflowConnectionSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "source_node_uuid": {
+            "title": "Source Node Uuid",
+            "type": "string"
+          },
+          "target_node_uuid": {
+            "title": "Target Node Uuid",
+            "type": "string"
+          },
+          "source_output": {
+            "title": "Source Output",
+            "type": "string"
+          },
+          "target_input": {
+            "title": "Target Input",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "source_node_uuid",
+          "target_node_uuid",
+          "source_output",
+          "target_input",
+          "created_at",
+          "metadata"
+        ],
+        "title": "WorkflowConnectionSchema",
+        "type": "object"
+      },
+      "WorkflowExecutionProgressSchema": {
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "source": {
+            "const": "recorded_node_activations",
+            "title": "Source",
+            "type": "string"
+          },
+          "label_source": {
+            "const": "current_workflow_definition",
+            "title": "Label Source",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowProgressStepSchema"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "source",
+          "label_source",
+          "truncated",
+          "steps"
+        ],
+        "title": "WorkflowExecutionProgressSchema",
+        "type": "object"
+      },
+      "WorkflowExecutionPendingReasonSchema": {
+        "description": "Why a ``requested`` edge execution has not started yet.\n\n``None`` on any row that is not waiting on an edge worker.",
+        "properties": {
+          "reason": {
+            "enum": [
+              "worker_starting",
+              "awaiting_edge"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "progress_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Percent"
+          }
+        },
+        "required": [
+          "reason",
+          "message"
+        ],
+        "title": "WorkflowExecutionPendingReasonSchema",
+        "type": "object"
+      },
+      "WorkflowNodeExecutionSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "execution_uuid": {
+            "title": "Execution Uuid",
+            "type": "string"
+          },
+          "node_uuid": {
+            "title": "Node Uuid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "input_data": {
+            "items": {},
+            "title": "Input Data",
+            "type": "array"
+          },
+          "output_data": {
+            "items": {},
+            "title": "Output Data",
+            "type": "array"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "error_message": {
+            "title": "Error Message",
+            "type": "string"
+          },
+          "execution_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Time Ms"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "activation_index": {
+            "default": 0,
+            "title": "Activation Index",
+            "type": "integer"
+          },
+          "caller_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Uuid"
+          }
+        },
+        "required": [
+          "uuid",
+          "execution_uuid",
+          "node_uuid",
+          "status",
+          "input_data",
+          "output_data",
+          "started_at",
+          "finished_at",
+          "error_message",
+          "execution_time_ms",
+          "metadata"
+        ],
+        "title": "WorkflowNodeExecutionSchema",
+        "type": "object"
+      },
+      "WorkflowInputOptionSchema": {
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "WorkflowInputOptionSchema",
         "type": "object"
       },
       "InspectionEvidenceInput": {
@@ -1112,6 +2353,65 @@
           "method"
         ],
         "title": "InspectionMeasurementInput",
+        "type": "object"
+      },
+      "WorkflowProgressStepSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "node_uuid": {
+            "title": "Node Uuid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "activation_index": {
+            "title": "Activation Index",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "required": [
+          "uuid",
+          "node_uuid",
+          "name",
+          "status",
+          "activation_index",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "WorkflowProgressStepSchema",
         "type": "object"
       }
     },

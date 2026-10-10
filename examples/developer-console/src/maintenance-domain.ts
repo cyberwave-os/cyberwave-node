@@ -1,5 +1,5 @@
 /** Application-owned maintenance proposals. These are examples, not platform models. */
-import type { InspectionCampaign } from "cyberwave";
+import type { InspectionCampaign, InspectionReviewInput } from "cyberwave";
 
 export type FindingReference = {
   environmentId: string;
@@ -11,8 +11,8 @@ export type FindingReference = {
   assetReference: string;
   evidenceReference: string;
   name: string;
-  severity: string;
-  priority: string;
+  severity: InspectionReviewInput["assessment"]["severity"];
+  priority: InspectionReviewInput["assessment"]["priority"];
   technicalState: string;
 };
 export function validatedFindings(

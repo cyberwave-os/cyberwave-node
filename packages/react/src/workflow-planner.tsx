@@ -7,9 +7,11 @@ import {
   type Workflow,
   type Twin,
   type components,
+  type WorkflowInputContract,
+  CyberwaveError,
 } from "cyberwave";
-import { WorkflowMonitor, workflowError } from "./workflow-monitor.tsx";
-import { workflowFieldText, workflowInputUpdates } from "./workflow-inputs.ts";
+import { WorkflowMonitor, workflowError } from "./workflow-monitor.js";
+import { workflowFieldText, workflowInputUpdates } from "cyberwave";
 
 export function WorkflowPlanner({
   client,
@@ -19,8 +21,12 @@ export function WorkflowPlanner({
   onChange,
   onCreated,
   onBusyChange,
+  readOnly = true,
+  serverPagination = false,
 }: {
   client: CyberwaveClient;
+  readOnly?: boolean;
+  serverPagination?: boolean;
   workflow: Workflow;
   environmentId?: string;
   workspaceId?: string;
@@ -28,7 +34,40 @@ export function WorkflowPlanner({
   onCreated: (w: Workflow) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
-  const fields = workflowEditableFields(workflow),
+  const [inputContract, setInputContract] = useState<WorkflowInputContract>();
+  const [contractStatus, setContractStatus] = useState(
+    "Loading input definitions…",
+  );
+  const [contractReady, setContractReady] = useState(false);
+  useEffect(() => {
+    const abort = new AbortController();
+    setInputContract(undefined);
+    setContractReady(false);
+    setContractStatus("Loading input definitions…");
+    client.workflows
+      .inputContract(workflow.uuid, { signal: abort.signal })
+      .then((contract) => {
+        if (!abort.signal.aborted) {
+          setInputContract(contract);
+          setContractReady(true);
+          setContractStatus("");
+        }
+      })
+      .catch((error) => {
+        if (abort.signal.aborted) return;
+        if (error instanceof CyberwaveError && error.status === 404) {
+          setContractStatus(
+            "This backend uses legacy input metadata; typed definitions are unavailable.",
+          );
+          setContractReady(true);
+        } else setContractStatus(workflowError(error));
+      });
+    return () => abort.abort();
+  }, [client, workflow]);
+  const editable =
+    !readOnly && contractReady && inputContract?.can_edit !== false;
+  const executable = editable && inputContract?.can_execute !== false;
+  const fields = workflowEditableFields(workflow, inputContract),
     schedules = workflowSchedules(workflow);
   const triggers = (workflow.nodes ?? []).filter(
     (n) => n.node_type === "trigger" && !n.is_disabled,
@@ -46,9 +85,6 @@ export function WorkflowPlanner({
         >,
       ).some((mapping) => !mapping || mapping.mode !== "value"),
     );
-  const local = ["localhost", "127.0.0.1", "[::1]"].includes(
-    new URL(client.baseUrl).hostname,
-  );
   const [name, setName] = useState(workflow.name + " · configured"),
     [busy, setBusy] = useState(false),
     [status, setStatus] = useState("");
@@ -145,7 +181,7 @@ export function WorkflowPlanner({
   }
   async function save() {
     await action(async () => {
-      const updates = workflowInputUpdates(workflow, values);
+      const updates = workflowInputUpdates(workflow, values, fields);
       if (timingDirty && configurable) {
         if (mode === "schedule" && !cron.trim())
           throw new Error(
@@ -205,16 +241,21 @@ export function WorkflowPlanner({
       ? twins.map((t) => ({ id: t.uuid, name: t.name }))
       : waypoints;
   return (
-    <section className="section-gap">
+    <section className="cw-workflows section-gap">
       <span className="studio-kicker">
         {workflow.is_template ? "TEMPLATE" : "CONFIGURED WORKFLOW"}
       </span>
       <h2>{workflow.name}</h2>
       <p>{workflow.description}</p>
-      {!local && (
+      {contractStatus && (
+        <p className="note" role="status">
+          {contractStatus}
+        </p>
+      )}
+      {readOnly && (
         <p className="note">
-          This example browses remote APIs. Connect to a local backend to
-          configure and execute workflows.
+          Read-only view. Enable editing in the host application to configure
+          workflows.
         </p>
       )}
       {workflow.is_template ? (
@@ -226,7 +267,10 @@ export function WorkflowPlanner({
           <button
             className="cw-button"
             disabled={
-              !local || busy || !name.trim() || (!environmentId && !workspaceId)
+              readOnly ||
+              busy ||
+              !name.trim() ||
+              (!environmentId && !workspaceId)
             }
             onClick={clone}
           >
@@ -270,15 +314,34 @@ export function WorkflowPlanner({
             </p>
           )}
           <fieldset
-            disabled={busy || workflow.is_active || !local}
+            disabled={busy || workflow.is_active || !editable}
             className="workflow-fields"
           >
             <legend>Inputs & targets</legend>
             {fields.map((f) => (
               <label className="field" key={f.nodeId + ":" + f.name}>
-                {f.nodeName} · {f.name}
-                {(f.name === "twin_uuid" && twins.length) ||
-                (f.name === "waypoint_id" && waypoints.length) ? (
+                {f.nodeName} · {f.label ?? f.name}
+                {f.required ? " *" : ""}
+                {Boolean(f.description) && <small>{f.description}</small>}
+                {f.options?.length ? (
+                  <select
+                    value={values[f.nodeId + ":" + f.name] ?? ""}
+                    onChange={(e) => {
+                      setValues({
+                        ...values,
+                        [f.nodeId + ":" + f.name]: e.target.value,
+                      });
+                      setDirty(true);
+                    }}
+                  >
+                    {f.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (f.name === "twin_uuid" && twins.length) ||
+                  (f.name === "waypoint_id" && waypoints.length) ? (
                   <select
                     value={values[f.nodeId + ":" + f.name] ?? ""}
                     onChange={(e) => {
@@ -430,7 +493,7 @@ export function WorkflowPlanner({
             <button
               className="cw-button"
               disabled={
-                !local ||
+                !editable ||
                 busy ||
                 dirty ||
                 !configurable ||
@@ -442,7 +505,7 @@ export function WorkflowPlanner({
             </button>
             <button
               className="cw-button"
-              disabled={!local || busy || !workflow.is_active}
+              disabled={!editable || busy || !workflow.is_active}
               onClick={() =>
                 action(async () => {
                   await client.workflows.deactivate(workflow.uuid);
@@ -469,6 +532,8 @@ export function WorkflowPlanner({
             </button>
           </div>
           <WorkflowMonitor
+            readOnly={!executable}
+            serverPagination={serverPagination}
             key={workflow.updated_at}
             client={client}
             workflow={workflow}

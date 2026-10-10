@@ -4,13 +4,13 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 const schema = new URL('../schema/openapi.json', import.meta.url);
 const extensions = new URL('../schema/extensions.openapi.json', import.meta.url);
-// Additive development contracts stay separate from the pinned production API.
+// Development additions and selected path overrides stay separate from the pinned production API.
 // Export from the backend's /api/v1/openapi.json; never hand-edit generated types.
 const extensionSource = process.argv.find(arg => arg.startsWith('--extensions-from='))?.split('=').slice(1).join('=');
 if (extensionSource) {
   const full = JSON.parse(await readFile(extensionSource, 'utf8'));
-  const paths = Object.fromEntries(Object.entries(full.paths).filter(([path]) => /\/environments\/\{uuid\}\/(inspection-|missions$)/.test(path) || /\/workspaces\/\{workspace_uuid\}\/missions$/.test(path)));
-  if (Object.keys(paths).length !== 6) throw new Error('Expected four inspection paths and environment/workspace mission discovery');
+  const paths = Object.fromEntries(Object.entries(full.paths).filter(([path]) => /\/environments\/\{uuid\}\/(inspection-|missions$)/.test(path) || /\/workspaces\/\{workspace_uuid\}\/missions$/.test(path) || /\/workflows(?:$|\/\{uuid\}\/(?:input-contract|executions)$)/.test(path)));
+  if (Object.keys(paths).length !== 9) throw new Error('Expected inspection, mission discovery, workflow input and pagination contracts');
   const schemas = {}, queue = [paths];
   while (queue.length) {
     const node = queue.shift();
@@ -21,7 +21,7 @@ if (extensionSource) {
     }
     queue.push(...Object.values(node));
   }
-  await writeFile(extensions, JSON.stringify({openapi:full.openapi,info:{title:'Cyberwave development extensions',version:'0.1.0-preview',description:'Additive endpoints implemented on CYB-4234; deployment availability must be checked separately.'},paths,components:{schemas,securitySchemes:full.components.securitySchemes}},null,2)+'\n');
+  await writeFile(extensions, JSON.stringify({openapi:full.openapi,info:{title:'Cyberwave development extensions',version:'0.1.0-preview',description:'Development endpoints and workflow pagination overrides; deployment availability must be checked separately.'},paths,components:{schemas,securitySchemes:full.components.securitySchemes}},null,2)+'\n');
 }
 if (process.argv.includes('--refresh')) {
   const origin = process.env.CYBERWAVE_API_URL || 'https://api.cyberwave.com';

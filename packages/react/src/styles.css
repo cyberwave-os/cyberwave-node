@@ -12,3 +12,15 @@
 .cw-status { color:var(--cw-muted); padding:20px 0; }.cw-error { color:#fda4af; width:100%; margin:6px 0; }.cw-summary h2 { font-size:23px; font-weight:550; letter-spacing:-.5px; margin:9px 0; }.cw-summary p,.cw-summary details { color:var(--cw-muted); }.cw-eyebrow { text-transform:uppercase; font-size:10px; letter-spacing:1.5px; color:var(--cw-accent); }.cw-metrics { display:flex; gap:26px; padding:18px 0; color:var(--cw-muted); }.cw-metrics strong { display:block; color:var(--cw-text); font-size:28px; font-weight:500; }
 .cw-connection :focus-visible,.cw-browser :focus-visible { outline:2px solid var(--cw-accent); outline-offset:3px; }
 .cw-recording-video { display:block; width:100%; max-height:550px; background:#080d12; border-radius:12px; }
+.cw-workflows { color:var(--cw-text); font:14px/1.5 Inter,ui-sans-serif,system-ui,sans-serif; min-width:0; }
+.cw-workflows .toolbar { display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin:16px 0; }
+.cw-workflows .field { display:grid; gap:6px; margin:10px 0; }
+.cw-workflows .field small,.cw-workflows .muted { color:var(--cw-muted); }
+.cw-workflows input,.cw-workflows select,.cw-workflows textarea { box-sizing:border-box; width:100%; min-height:38px; padding:8px 10px; border:1px solid var(--cw-border); border-radius:7px; color:inherit; background:var(--cw-bg); font:inherit; }
+.cw-workflows .workflow-fields { border:1px solid var(--cw-border); border-radius:var(--cw-radius); padding:16px; margin:16px 0; display:grid; gap:12px; }
+.cw-workflows .workflow-fields:disabled { opacity:.65; }
+.cw-workflows .section-gap,.cw-workflows.section-gap { margin-top:24px; }
+.cw-workflows .note { padding:14px; background:var(--cw-panel); border:1px solid var(--cw-border); border-radius:8px; }
+.cw-workflows pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:320px; overflow:auto; }
+.cw-workflows .comparison { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.cw-workflows :focus-visible { outline:2px solid var(--cw-accent); outline-offset:3px; }

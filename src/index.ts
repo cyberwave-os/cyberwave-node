@@ -1,7 +1,9 @@
 import createClient from 'openapi-fetch';
-import type { paths, components } from './generated/schema.js';
+import type { paths as ProductionPaths, components } from './generated/schema.js';
 import type { paths as ExtensionPaths, components as ExtensionComponents } from './generated/extensions.js';
-export type { paths, components } from './generated/schema.js';
+export type { components } from './generated/schema.js';
+export type paths = Omit<ProductionPaths, keyof ExtensionPaths> & ExtensionPaths;
+export type WorkflowInputContract = ExtensionComponents['schemas']['WorkflowInputContractSchema'];
 export type Asset = components['schemas']['AssetSchema'];
 export type Environment = components['schemas']['EnvironmentSchema'];
 export type Twin = components['schemas']['TwinSchema'];
@@ -13,7 +15,7 @@ export type Mission = components['schemas']['MissionSchema'];
 export type MissionExecution = components['schemas']['MissionExecutionSchema'];
 export type Workflow = components['schemas']['WorkflowSchema'];
 export type WorkflowNode = components['schemas']['WorkflowNodeSchema'];
-export { workflowEditableFields, workflowNodePatch, workflowSchedules } from './workflows.js';
+export { workflowEditableFields, workflowNodePatch, workflowSchedules, workflowFieldText, workflowInputUpdates } from './workflows.js';
 export type { WorkflowEditableField } from './workflows.js';
 export type WorkflowExecution = components['schemas']['WorkflowExecutionSchema'];
 export type WorkflowQuery = NonNullable<paths['/api/v1/workflows']['get']['parameters']['query']>;
@@ -68,7 +70,7 @@ export function assetModel(asset: Pick<Asset, 'urdf_file' | 'glb_file'>, baseUrl
 export function createCyberwave(options: ClientOptions = {}) {
   const baseUrl = normalizeApiUrl(options.baseUrl);
   const transport = options.fetch ?? globalThis.fetch;
-  const rest = createClient<paths & ExtensionPaths>({ baseUrl, fetch: async (request) => {
+  const rest = createClient<paths>({ baseUrl, fetch: async (request) => {
     if (new URL(request.url).origin !== baseUrl) throw new Error('API credentials cannot cross origins.');
     const headers = new Headers(request.headers);
     headers.delete('Authorization');
@@ -102,8 +104,9 @@ export function createCyberwave(options: ClientOptions = {}) {
     get: (twin_uuid: string, uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{twin_uuid}/missions/{uuid}', { params: { path: { twin_uuid, uuid } }, ...opts })),
     executions: (twin_uuid: string, uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{twin_uuid}/missions/{uuid}/executions', { params: { path: { twin_uuid, uuid } }, ...opts })),
   };
-  /** Existing workflow engine. List is currently unpaginated; always scope large catalogs. */
+  /** Existing workflow engine; preview pagination requires the updated backend. */
   const workflows = {
+    inputContract: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}/input-contract', {params:{path:{uuid}},...opts})),
     clone: (uuid: string, body: components['schemas']['WorkflowCloneSchema'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/workflows/{uuid}/clone', {params:{path:{uuid}},body,...opts})),
     update: (uuid: string, body: components['schemas']['WorkflowUpdateSchema'], opts: ReadOptions = {}) => data(rest.PUT('/api/v1/workflows/{uuid}', {params:{path:{uuid}},body,...opts})),
     updateNode: (uuid: string, node_uuid: string, body: components['schemas']['WorkflowNodeUpdateSchema'], opts: ReadOptions = {}) => data(rest.PUT('/api/v1/workflows/{uuid}/nodes/{node_uuid}', {params:{path:{uuid,node_uuid}},body,...opts})),
@@ -115,7 +118,7 @@ export function createCyberwave(options: ClientOptions = {}) {
     templates: (opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/templates', opts)),
     list: (query: WorkflowQuery = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows', { params: { query }, ...opts })),
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}', { params: { path: { uuid } }, ...opts })),
-    executions: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}/executions', { params: { path: { uuid } }, ...opts })),
+    executions: (uuid: string, opts: ReadOptions & {limit?: number; offset?: number} = {}) => { const {limit, offset, ...read} = opts; return data(rest.GET('/api/v1/workflows/{uuid}/executions', { params: { path: { uuid }, query: {limit, offset} }, ...read })); },
   };
   const recordings = {
     list: (uuid: string, query: RecordingQuery = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/recordings', { params: { path: { uuid }, query }, ...opts })),

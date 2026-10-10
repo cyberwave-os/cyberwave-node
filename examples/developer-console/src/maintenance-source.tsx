@@ -11,9 +11,11 @@ export function MaintenanceSource({
   client,
   environmentId,
   onSelect,
+  actionLabel = "Link to maintenance proposal ↗",
 }: {
   client: CyberwaveClient;
   environmentId: string;
+  actionLabel?: string;
   onSelect: (finding: FindingReference) => void;
 }) {
   const [rows, setRows] = useState<
@@ -129,7 +131,7 @@ export function MaintenanceSource({
                 {finding.assetReference} · {finding.priority} · review{" "}
                 {finding.revision}
               </small>
-              <small>Link to maintenance proposal ↗</small>
+              <small>{actionLabel}</small>
             </span>
           </button>
         ))}

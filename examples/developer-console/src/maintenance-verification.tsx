@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ConnectedWorkbench, downloadJson } from "./workbench-connection.tsx";
+import { StoredVerification } from "./stored-verification.tsx";
 import { WorkflowWorkbench } from "./workflow-workbench.tsx";
 import {
   reconcileWorkOrder,
@@ -339,12 +340,15 @@ function App() {
         </div>
         <p className="note">
           References and reviewer names above are illustrative user input. They
-          are not validated evidence or authenticated approvals. The current
-          inspection API preserves observations and review revisions, but does
-          not yet store maintenance links, verified resolution or delivery
-          acceptance. No defect is closed by this example.
+          are not validated evidence or authenticated approvals. The synthetic
+          controls above do not update the backend. Use stored evidence below to
+          record an authenticated resolution review. Work-order synchronization
+          and delivery acceptance remain application responsibilities.
         </p>
       </section>
+      <ConnectedWorkbench>
+        {(client) => <StoredVerification client={client} />}
+      </ConnectedWorkbench>
       <section className="section-gap">
         <h2>Schedule or run a verification visit</h2>
         <p className="muted">

@@ -30,7 +30,7 @@ The monitor polls history and the selected run every five seconds, suspends requ
 ### Boundaries and next increments
 
 - A workflow belongs to a workspace and may bind one environment. Multi-environment activity needs explicit step targets and supported adapters.
-- Existing lists are scoped but unpaginated; UI display pages do not bound server work. Add backend pagination before large-scale governance.
+- Updated workflow lists and execution history support server pagination. Pass limits explicitly; omitted workflow-list limits preserve legacy full-list behavior. The UI supports a compatibility mode for older deployments.
 - Durable one-off scheduling, atomic due-slot claims/recovery, correlated child completion/cancellation and exclusive resource allocation remain backend work. They should extend workflows rather than introduce a parallel planning engine.
 - “Dynamic workflow” can describe runtime composition in a product, but does not imply arbitrary dynamic target support: some edge actions require targets fixed before compilation.
 
@@ -40,9 +40,9 @@ Existing task-sequence Mission APIs remain accessible through `client.missions` 
 
 ## Development inspection extension
 
-The branch backend persists four records: **campaign → observation → review revisions**, with each observation linked to a persistent **defect** across campaigns. Environment permissions govern reads/writes. Campaign import is atomic and idempotent by environment/external ID; changed manifests conflict. Source observations are immutable through this API. Review writes require a reason, the current revision and an idempotency key, and record the authenticated reviewer. Missing coverage cannot establish a resolved defect.
+The branch backend persists four records: **campaign → observation → review revisions**, with each observation linked to a persistent **defect** across campaigns. Environment permissions govern reads/writes. Campaign import is atomic and idempotent by environment/external ID; changed manifests conflict. Source observations are immutable through this API. Review writes require a reason, the current revision and an idempotency key, and record the authenticated reviewer. Missing coverage cannot establish a resolved defect. The updated API supports verified resolution with covered-target absence evidence and an explicit validated baseline review; see the persisted-verification section below.
 
-Use `client.inspections.list/get/importCampaign/history/review`. Manifests contain evidence identifiers, measurements/uncertainty, localization and model provenance; importing does not fetch URLs or upload videos. Delivery acceptance, resumable video ingestion, complete AI-run parameters, defect merges, maintenance synchronization, verified resolution, signed reports and retention policy remain later increments.
+Use `client.inspections.list/get/importCampaign/history/review`. Manifests contain evidence identifiers, measurements/uncertainty, localization and model provenance; importing does not fetch URLs or upload videos. Delivery acceptance, resumable video ingestion, complete AI-run parameters, defect merges, maintenance synchronization, signed reports and retention policy remain later increments.
 
 These additive endpoints are **development features**, not a claim about production deployment. Their OpenAPI fragment is exported from the backend into `schema/extensions.openapi.json` and generated into `src/generated/extensions.ts`, separate from the pinned production schema. Refresh with `pnpm generate --extensions-from=/absolute/path/to/backend-openapi.json`. Older servers can return 404; the inspection panel explains unavailability. The example gateway permits allowlisted inspection metadata and workflow operations on authenticated localhost connections; telecontrol routes retain their separate configured target.
 
@@ -55,7 +55,7 @@ The official [`cyberwave`](https://www.npmjs.com/package/cyberwave) package for 
 | Package | Responsibility |
 | --- | --- |
 | `cyberwave` | Generated OpenAPI types + typed Fetch transport; authentication injection, catalog/environment, workflow configuration/run helpers, legacy mission and recording read helpers and scene loading. No React or 3D dependency. |
-| `@cyberwave/react` | `CyberwaveProvider`, `useCyberwave`, `useEnvironment`, `ConnectionPanel`, `EnvironmentBrowser`, `AssetBrowser`, `EnvironmentSummary`, `RecordingBrowser`, `useRecordingPlayback`, `RecordingVideo`; opt-in CSS tokens. |
+| `@cyberwave/react` | `CyberwaveProvider`, `useCyberwave`, `useEnvironment`, `ConnectionPanel`, `EnvironmentBrowser`, `AssetBrowser`, `EnvironmentSummary`, `RecordingBrowser`, `useRecordingPlayback`, `RecordingVideo`, `WorkflowCatalog`, `WorkflowPlanner`, `WorkflowMonitor`, `InspectionVerificationPanel`; opt-in CSS tokens. |
 | `@cyberwave/environment-3d` | Read-only Three.js renderer for actual GLB and URDF models, meshes, measured poses and joints; orbit, fit and selection. No command transport. |
 
 ## Run the examples
@@ -166,13 +166,52 @@ const executions = await client.missions.executions(twinId, missionId);
 
 `RecordingBrowser` and `useRecordingPlayback` share provider auth and cancellation. `RecordingVideo` wraps native playback and emits media-relative seconds. Catalog timestamps are microseconds, including the legacy aliases. `recordingWindow` validates them without guessing units; precise sensor alignment needs a capture-clock/SEI adapter. Refresh playback descriptors when signed URLs expire. Never persist signed URLs in campaign exports. Actuation Parquet, point clouds and chunked recordings need dedicated adapters and are explicitly reported as unsupported by the basic video example.
 
-Mission writes remain available through `client.rest` using generated contracts. The examples' general connection permits reads only. A saved task sequence, a scheduled execution, and a validated aircraft flight plan are separate concepts. Application services own preparation, approvals, idempotency, resource allocation and command execution.
+Mission writes remain available through `client.rest` using generated contracts. The examples' general connection permits remote reads and explicitly scoped local workflow/inspection writes. A saved task sequence, a scheduled execution, and a validated aircraft flight plan are separate concepts. Application services own preparation, approvals, idempotency, resource allocation and command execution.
 
 The aerial workbench is a synthetic draft and kinematic cursor, not an autopilot or physics simulator. It distinguishes multirotor, runway/catapult fixed-wing and hybrid VTOL requirements. Coverage geometry assumes flat ground; non-AGL input is blocked pending terrain/datum conversion. It exposes runway length, turn-radius and reserve checks without declaring a route flight-ready. The inspection workbench keeps persistent defect identity separate from campaign observations, technical condition, review and maintenance priority; its local review/export data model is illustrative and is not an implemented backend API.
 
 
 ## Maintenance planning and verification
 
-[Maintenance planning](http://127.0.0.1:5173/maintenance-planning.html) combines preventive/corrective proposals, work-window and sample crew-conflict checks, real saved inspection reviews, and the existing workflow planner. Its export retains API origin, immutable observation/review references and an optional workflow link. [Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) exercises replay-safe work-order updates, expert verification, and partial delivery coverage using synthetic browser data.
+[Maintenance planning](http://127.0.0.1:5173/maintenance-planning.html) combines preventive/corrective proposals, work-window and sample crew-conflict checks, real saved inspection reviews, and the existing workflow planner. Its export retains API origin, immutable observation/review references and an optional workflow link. [Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) exercises replay-safe work-order updates and partial delivery coverage using synthetic browser data, plus authenticated persisted verification against stored branch evidence.
 
 These are application examples, not new SDK or backend maintenance models. Cyberwave remains responsible for workflows/runs and inspection evidence; the application and its maintenance system own proposals, work orders and acceptance. Work-order completion alone never resolves a defect. See the [maintenance integration guide](examples/developer-console/MAINTENANCE.md) for scenarios, data ownership and missing backend contracts.
+
+
+## Reusable workflow components and backend contracts
+
+Backend definitions are the source of truth. `workflows.inputContract(id)` projects existing `metadata.editable_fields`, static node bindings and the node schema registry into labels, types, required flags, choices and edit/execute permission hints. Reference/expression/caller bindings stay in the graph editor. These are saved defaults, not a new variable or mission model. Edited literals are checked on the backend; unchanged legacy values remain editable through the existing graph workflow.
+
+```tsx
+import { WorkflowCatalog } from '@cyberwave/react';
+import '@cyberwave/react/styles.css';
+
+<WorkflowCatalog
+  client={client}
+  environmentId={environmentId} // or workspaceId for governance
+  readOnly={false}             // application explicitly enables mutations
+  serverPagination            // use with the updated backend
+/>
+```
+
+`WorkflowPlanner`, `WorkflowMonitor` and `InspectionVerificationPanel` are also exported individually. Components default to read-only and have no hostname restriction; the example wrapper restricts writes to its local backend. Backend ACLs remain authoritative. Run/trigger requests now require workflow write access and recheck the existing actuation-target guard. Reader accounts can browse and monitor.
+
+```ts
+const contract = await client.workflows.inputContract(workflowId);
+const page = await client.workflows.list({ workspace_uuid: workspaceId, limit: 20, offset: 0 });
+const history = await client.workflows.executions(workflowId, { limit: 10, offset: 0 });
+```
+
+Pagination is opt-in for existing workflow-list callers; omission retains the old full-list behavior. Execution history defaults to 100 rows and supports paging. Stable tie-break ordering avoids ambiguous ordering for equal timestamps; this is offset pagination, not an immutable snapshot across edits. The React catalog defaults to client paging for older deployments; set `serverPagination` once the updated backend is deployed. The examples enable it on the branch backend. A missing input-contract endpoint (404) visibly falls back to legacy metadata; authentication/server errors do not silently fall back.
+
+The planner reuses clone, node edit/conflict detection, activation, recurring triggers, execution and cancel APIs. Multi-node edits still consist of individual operations; reload an inactive draft after partial failure. There are no automatic command retries. One-off durable schedules, cross-workflow resource reservations and arbitrary dynamic allocation remain backend follow-ups.
+
+### Generated development contracts
+
+`schema/extensions.openapi.json` contains the preview inspection endpoints, legacy mission discovery, workflow input contract and selected workflow pagination path overrides. Regenerate it from a backend OpenAPI export with `pnpm generate --extensions-from=/path/openapi.json`. The root client's merged `paths` type gives development paths precedence over production paths; `cyberwave/generated` remains the pinned production schema. Do not edit either generated TypeScript file. Deploy the matching backend before using preview features.
+
+### Persisted verification
+
+A follow-up inspection can declare `target_covered: true`, `observed: false`, an evidence reference and an explanation. A `resolved` review must be validated and reference `verification_of_review_uuid`, the latest validated review of an observed finding for the same defect in an earlier imported campaign. The API checks these relations, enforces environment write access and preserves optimistic revisions/idempotent retries. Optional `work_order_reference` is an external identifier, not an acknowledgement or authenticated integration receipt.
+
+The verification component selects stored evidence and appends this review with the authenticated identity. The backend verifies declared evidence and relationships, not the truth of media contents. Old manifests and retry hashes remain compatible. Partial campaign coverage does not prevent resolution of a covered target and does not imply delivery acceptance. See [the maintenance example](examples/developer-console/MAINTENANCE.md).

@@ -246,9 +246,3 @@
     padding: 8px 4px;
   }
 }
-.workflow-fields { border: 1px solid var(--line, #28303c); border-radius: 12px; padding: 16px; margin: 16px 0; display: grid; gap: 12px; }
-.workflow-fields legend { padding: 0 8px; color: var(--muted, #a0a7b4); }
-.workflow-fields .field { display: grid; gap: 6px; }
-.workflow-fields input, .workflow-fields select { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid #334155; border-radius: 7px; color: inherit; background: #101822; }
-.workflow-fields:disabled { opacity: .65; }
-.note pre { white-space: pre-wrap; overflow-wrap: anywhere; }

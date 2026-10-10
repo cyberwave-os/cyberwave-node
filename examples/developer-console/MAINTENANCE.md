@@ -32,11 +32,18 @@ For a multi-site portfolio, query workflows at workspace scope and drill into th
 
 The example contract is illustrative and versioned under `cyberwave.example.*`; it is not a published Cyberwave endpoint or an integration standard. Its local revision checks teach reconciliation, not exactly-once delivery. The actual maintenance adapter must use the external system's contract and authenticated server-side persistence.
 
-## Small backend increments, in order
+## Remaining backend and integration increments
 
 1. Agree the external system and asset mapping; start with controlled export/import and a durable exchange receipt. Revalidate referenced review revisions and caller scope before actual submission. Reuse existing application integration patterns, with an outbox/inbox only when an automated connector needs reliable delivery. Do not build another work-order engine.
-2. Extend existing append-only inspection reviews with an explicit verification relation and evidence-backed resolution. Today the API intentionally excludes `resolved`; do not send the demo's resolution value to `inspections.review`. Validate post-intervention evidence, permissions and revision conflicts server-side. Prefer evidence/relationship additions to a parallel Mission or MaintenancePlan model.
+2. The branch API now supports evidence-backed `resolved` reviews on existing observation history, with a baseline review reference, covered-target evidence, authenticated author and revision/idempotency checks. The stored-evidence section uses it. Add evidence acquisition timestamps and a durable external-system receipt when implementing a real intervention connector. The optional order reference alone is not proof that an order was completed.
 3. Add expected/delivered scope and reasoned acceptance/rework to the existing campaign boundary. Introduce assignment/deadline/phase timing only for a concrete delivery workflow; do not encode business acceptance in workflow execution status.
-4. Harden one-off scheduled workflow runs, due-slot recovery and resource claims when operations require them. Keep recurring schedule semantics intact. Add scoped paginated governance queries before client-side fan-out becomes a bottleneck.
+4. Harden one-off scheduled workflow runs, due-slot recovery and resource claims when operations require them. Keep recurring schedule semantics intact. Workflow and execution queries now support scoped pagination; an authoritative current-condition portfolio projection remains future work.
 
-This increment adds no database model or scheduler. Local workflow persistence and real inspection reads remain available through the same SDK and backend patterns. Proposals, external updates and verification decisions above are deliberately local demonstration state until those contracts exist.
+This increment adds no database model or scheduler. Local workflow persistence and real inspection reads remain available through the same SDK and backend patterns. Proposals and external updates remain local demonstration state. The separate stored-evidence verification component persists reviews through the existing inspection API.
+
+
+## Verify persistence in example 13
+
+Connect the shared header to the updated local backend, then use **Verify evidence stored in Cyberwave**. Select a campaign with a validated finding as the baseline. In the SDK sandbox, **Import synthetic verification visit** creates a new explicitly synthetic campaign with 68% overall coverage and positive evidence of coverage for the selected target. Choose its absent-finding observation, enter a verification reason and optional order reference, then **Save verified resolution**. **Reload evidence** retains `resolved · revision 1`; the authenticated reviewer and immutable baseline remain in the API review history. The overall campaign remains unaccepted.
+
+The UI reuses `InspectionVerificationPanel` from `@cyberwave/react`. Existing applications can compose it with their own environment/campaign selectors. The simple form handles resolution; other review states remain available through `inspections.review` and the campaign workbench.
