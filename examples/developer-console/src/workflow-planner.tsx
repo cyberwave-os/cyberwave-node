@@ -9,6 +9,7 @@ import {
   type components,
 } from "cyberwave";
 import { WorkflowMonitor, workflowError } from "./workflow-monitor.tsx";
+import { workflowFieldText, workflowInputUpdates } from "./workflow-inputs.ts";
 
 export function WorkflowPlanner({
   client,
@@ -17,6 +18,7 @@ export function WorkflowPlanner({
   workspaceId,
   onChange,
   onCreated,
+  onBusyChange,
 }: {
   client: CyberwaveClient;
   workflow: Workflow;
@@ -24,6 +26,7 @@ export function WorkflowPlanner({
   workspaceId?: string;
   onChange: (w: Workflow) => void;
   onCreated: (w: Workflow) => void;
+  onBusyChange: (busy: boolean) => void;
 }) {
   const fields = workflowEditableFields(workflow),
     schedules = workflowSchedules(workflow);
@@ -50,7 +53,8 @@ export function WorkflowPlanner({
     [busy, setBusy] = useState(false),
     [status, setStatus] = useState("");
   const [values, setValues] = useState<Record<string, string>>({}),
-    [dirty, setDirty] = useState(false);
+    [dirty, setDirty] = useState(false),
+    [timingDirty, setTimingDirty] = useState(false);
   const [mode, setMode] = useState<"manual" | "schedule">(
     triggers[0]?.trigger_type === "schedule" ? "schedule" : "manual",
   );
@@ -70,13 +74,12 @@ export function WorkflowPlanner({
       Object.fromEntries(
         workflowEditableFields(workflow).map((f) => [
           f.nodeId + ":" + f.name,
-          typeof f.value === "string"
-            ? f.value
-            : (JSON.stringify(f.value) ?? "null"),
+          workflowFieldText(f.value),
         ]),
       ),
     );
     setDirty(false);
+    setTimingDirty(false);
     setTarget(workflow.execution_target);
     const entry = workflow.nodes?.find(
       (node) => node.node_type === "trigger" && !node.is_disabled,
@@ -85,7 +88,9 @@ export function WorkflowPlanner({
       (row) => row.nodeId === entry?.uuid,
     );
     setMode(schedule ? "schedule" : "manual");
-    setCron(String(schedule?.configuration.cron ?? "0 9 * * 1-5"));
+    setCron(
+      String(schedule ? (schedule.configuration.cron ?? "") : "0 9 * * 1-5"),
+    );
     setTimezone(String(schedule?.configuration.timezone ?? "UTC"));
   }, [workflow]);
   useEffect(() => {
@@ -113,6 +118,7 @@ export function WorkflowPlanner({
   }, [client, environmentId, workflow.environment_uuid, workflow.is_template]);
   async function action(fn: () => Promise<void>) {
     setBusy(true);
+    onBusyChange(true);
     setStatus("Working…");
     try {
       await fn();
@@ -122,6 +128,7 @@ export function WorkflowPlanner({
       );
     } finally {
       setBusy(false);
+      onBusyChange(false);
     }
   }
   async function clone() {
@@ -138,64 +145,36 @@ export function WorkflowPlanner({
   }
   async function save() {
     await action(async () => {
-      // Parse all fields before sending any mutation. Failed requests leave an inactive, inspectable draft.
-      const parsed = new Map(
-        fields.map((f) => {
-          const raw = values[f.nodeId + ":" + f.name] ?? "";
-          const value = typeof f.value === "string" ? raw : JSON.parse(raw);
-          if (
-            typeof f.value === "number" &&
-            (typeof value !== "number" || !Number.isFinite(value))
-          )
-            throw new Error(f.name + " must be a number.");
-          if (typeof f.value === "boolean" && typeof value !== "boolean")
-            throw new Error(f.name + " must be true or false.");
-          if (
-            f.value !== null &&
-            typeof f.value === "object" &&
-            (value === null ||
-              typeof value !== "object" ||
-              Array.isArray(value) !== Array.isArray(f.value))
-          )
-            throw new Error(
-              f.name + " must preserve its JSON object/array shape.",
-            );
-          return [f.nodeId + ":" + f.name, value];
-        }),
-      );
-      for (const node of workflow.nodes ?? []) {
-        const bound = fields.filter((f) => f.nodeId === node.uuid);
-        const timing =
-          configurable &&
-          node.uuid === triggers[0].uuid &&
-          (timingEditable || mode === node.trigger_type);
-        if (!bound.length && !timing) continue;
-        const patch = workflowNodePatch(
-          node,
-          bound,
-          Object.fromEntries(
-            bound.map((f) => [f.name, parsed.get(f.nodeId + ":" + f.name)]),
-          ),
-        );
-        await client.workflows.updateNode(workflow.uuid, node.uuid, {
+      const updates = workflowInputUpdates(workflow, values);
+      if (timingDirty && configurable) {
+        if (mode === "schedule" && !cron.trim())
+          throw new Error(
+            "Enter a cron expression to change the schedule. Existing interval schedules stay unchanged until edited.",
+          );
+        const node = triggers[0];
+        const existing = updates.find((update) => update.nodeId === node.uuid);
+        const patch = existing?.patch ?? workflowNodePatch(node, [], {});
+        const timing = {
           ...patch,
-          ...(timing
-            ? {
-                trigger_type: mode,
-                node_subtype: mode,
-                ...(node.trigger_type !== mode
-                  ? { name: mode === "schedule" ? "Schedule" : "Manual" }
-                  : {}),
-                parameters: {
-                  ...patch.parameters,
-                  ...(mode === "schedule"
-                    ? { mode: "advanced", cron, timezone }
-                    : {}),
-                },
-              }
+          trigger_type: mode,
+          node_subtype: mode,
+          ...(node.trigger_type !== mode
+            ? { name: mode === "schedule" ? "Schedule" : "Manual" }
             : {}),
-        });
+          parameters: {
+            ...patch.parameters,
+            ...(mode === "schedule"
+              ? { mode: "advanced", cron, timezone }
+              : {}),
+          },
+        };
+        if (existing) existing.patch = timing;
+        else updates.push({ nodeId: node.uuid, patch: timing });
       }
+      // All validation above completes before the first request. Each update
+      // keeps the backend's optimistic concurrency guard; no automatic retries.
+      for (const { nodeId, patch } of updates)
+        await client.workflows.updateNode(workflow.uuid, nodeId, patch);
       if (target !== workflow.execution_target)
         await client.workflows.update(workflow.uuid, {
           execution_target: target,
@@ -373,6 +352,7 @@ export function WorkflowPlanner({
                     value={mode}
                     onChange={(e) => {
                       setMode(e.target.value as typeof mode);
+                      setTimingDirty(true);
                       setDirty(true);
                     }}
                   >
@@ -395,6 +375,7 @@ export function WorkflowPlanner({
                         onChange={(e) => {
                           if (e.target.value !== "custom") {
                             setCron(e.target.value);
+                            setTimingDirty(true);
                             setDirty(true);
                           }
                         }}
@@ -411,6 +392,7 @@ export function WorkflowPlanner({
                         value={cron}
                         onChange={(e) => {
                           setCron(e.target.value);
+                          setTimingDirty(true);
                           setDirty(true);
                         }}
                       />
@@ -421,6 +403,7 @@ export function WorkflowPlanner({
                         value={timezone}
                         onChange={(e) => {
                           setTimezone(e.target.value);
+                          setTimingDirty(true);
                           setDirty(true);
                         }}
                       />

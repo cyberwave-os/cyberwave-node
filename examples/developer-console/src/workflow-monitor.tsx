@@ -26,7 +26,8 @@ export function WorkflowMonitor({
     [detail, setDetail] = useState<WorkflowExecution>(),
     [runId, setRunId] = useState(""),
     [status, setStatus] = useState("Loading runs…");
-  const [tick, setTick] = useState(0);
+  const [tick, setTick] = useState(0),
+    [canceling, setCanceling] = useState(false);
   useEffect(() => {
     const abort = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
@@ -68,12 +69,15 @@ export function WorkflowMonitor({
     };
   }, [client, workflow.uuid, runId, tick]);
   async function cancel() {
-    if (!detail) return;
+    if (!detail || canceling) return;
+    setCanceling(true);
     try {
       await client.workflows.cancel(detail.uuid);
       setTick((t) => t + 1);
     } catch (e) {
       setStatus(workflowError(e));
+    } finally {
+      setCanceling(false);
     }
   }
   return (
@@ -104,8 +108,18 @@ export function WorkflowMonitor({
           <strong>{detail.status}</strong>
           <p>{detail.error_message}</p>
           {["running", "waiting", "requested"].includes(detail.status) && (
-            <button className="cw-button" onClick={cancel}>
-              Cancel run
+            <button
+              className="cw-button"
+              disabled={
+                canceling ||
+                (!!runId && detail.uuid !== runId) ||
+                !["localhost", "127.0.0.1", "[::1]"].includes(
+                  new URL(client.baseUrl).hostname,
+                )
+              }
+              onClick={cancel}
+            >
+              {canceling ? "Canceling…" : "Cancel run"}
             </button>
           )}
           {detail.node_executions?.map((node) => (

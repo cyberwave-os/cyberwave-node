@@ -4,10 +4,12 @@ import { createGateway } from '../server.mjs';
 const settings = { mode: 'fixture', apiUrl: 'http://localhost:8000', token: 'local-only-secret', anchor: { longitude: 0, latitude: 0, height: 0, yawDegrees: 0 } };
 async function run(upstream, callback) {
   const server = createGateway(settings, upstream); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${server.address().port}`; let cookie = '';
+  const base = `http://127.0.0.1:${server.address().port}`; let cookie = '', connectionId = '';
   const request = async (path, method = 'GET', body, origin = 'http://127.0.0.1:5173', extraHeaders = {}) => {
-    const result = await fetch(base + path, { method, headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/json', ...extraHeaders }, body: body === undefined ? undefined : JSON.stringify(body) });
-    if (result.headers.get('set-cookie')) cookie = result.headers.get('set-cookie').split(';')[0]; return result;
+    const result = await fetch(base + path, { method, headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/json', 'X-Cyberwave-Connection': connectionId, ...extraHeaders }, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (result.headers.get('set-cookie')) cookie = result.headers.get('set-cookie').split(';')[0];
+    if (path === '/gateway/connection' && method === 'POST' && result.ok) connectionId = (await result.clone().json()).connectionId;
+    return result;
   };
   try { await callback(request); } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 }
@@ -21,6 +23,30 @@ test('production is read-only and does not inherit the local token', async () =>
     assert.equal((await request('/gateway/rest/api/v1/assets', 'POST', {})).status, 405);
     assert.equal((await request('/gateway/rest/api/v1/twins/robot/navigation')).status, 403);
     assert.equal(calls.length, 1); assert.equal(calls[0].opts.headers.Authorization, undefined);
+  });
+});
+test('another tab reconnecting cannot silently retarget a stale client, including same-origin account changes', async () => {
+  const calls = [];
+  await run(async (url, opts) => { calls.push(opts); return Response.json([]); }, async request => {
+    const first = await (await request('/gateway/connection', 'POST', {baseUrl:'http://localhost:8000'})).json();
+    for (const baseUrl of ['https://api.cyberwave.com', 'http://localhost:8000']) {
+      await request('/gateway/connection', 'POST', {baseUrl,token:'different-account'});
+      const staleHeaders={'X-Cyberwave-Connection':first.connectionId};
+      const stale = await request('/gateway/rest/api/v1/assets','GET',undefined,'http://127.0.0.1:5173',staleHeaders);
+      assert.equal(stale.status,409);
+      assert.match((await stale.json()).detail,/another tab/);
+      assert.equal((await request('/gateway/rest/api/v1/workflows/w/execute','POST',{},'http://127.0.0.1:5173',staleHeaders)).status,409);
+    }
+    assert.equal(calls.length,0);
+    assert.equal((await request('/gateway/rest/api/v1/assets')).status,200);
+  });
+});
+test('a malformed asset URL does not fail the whole catalog response',async()=>{
+  await run(async()=>Response.json([{urdf_file:'http://[broken',name:'Broken'},{glb_file:'https://storage.example.com/model.glb',name:'Valid'}]),async request=>{
+    await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com'});
+    const response=await request('/gateway/rest/api/v1/assets');
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).length,2);
   });
 });
 test('inspection writes are local, authenticated, bounded to metadata routes',async()=>{

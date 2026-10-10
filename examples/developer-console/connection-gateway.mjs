@@ -1,5 +1,5 @@
 /** Development BFF: remote reads, explicit local inspection and workflow writes. */
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { normalizeApiUrl } from 'cyberwave';
 const ttl = 60 * 60 * 1000;
@@ -17,7 +17,8 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
     if (!data || typeof data !== 'object') return;
     for (const key of ['urdf_file', 'glb_file', 'thumbnail']) {
       if (typeof data[key] !== 'string' || !data[key]) continue;
-      const url = new URL(data[key], session.origin);
+      let url;
+      try { url = new URL(data[key], session.origin); } catch { continue; }
       if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) continue;
       session.files.add(url.href);
       const project = url.href.match(/^(.*\/urdf_projects\/[^/]+\/)/)?.[1];
@@ -40,21 +41,27 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
       const input = JSON.parse(body), origin = normalizeApiUrl(input.baseUrl);
       const token = typeof input.token === 'string' ? input.token.trim() : '';
       if (/[\r\n]/.test(token)) { send(400, { detail: 'Invalid token' }); return true; }
-      if (sessions.size >= 100) { send(429, { detail: 'Too many active sessions' }); return true; }
+      if (sessions.size >= 100 && !session) { send(429, { detail: 'Too many active sessions' }); return true; }
       if (id) sessions.delete(id);
       const nextId = randomBytes(24).toString('hex');
       const scopedToken = token || (origin === localOrigin ? localToken : undefined);
-      session = { origin, token: scopedToken, files: new Set(), roots: new Set(), expires: Date.now() + ttl };
+      session = { connectionId: randomUUID(), origin, token: scopedToken, files: new Set(), roots: new Set(), expires: Date.now() + ttl };
       sessions.set(nextId, session);
       res.setHeader('Set-Cookie', `cyberwave_example=${nextId}; HttpOnly; SameSite=Strict; Path=/gateway; Max-Age=3600`);
-      send(200, { baseUrl: origin, authenticated: !!scopedToken }); return true;
+      send(200, { connectionId: session.connectionId, baseUrl: origin, authenticated: !!scopedToken }); return true;
     }
     if (url.pathname === '/gateway/connection' && req.method === 'DELETE') {
       sessions.delete(id); res.setHeader('Set-Cookie', 'cyberwave_example=; HttpOnly; SameSite=Strict; Path=/gateway; Max-Age=0'); send(200, { disconnected: true }); return true;
     }
     if (!session) { send(401, { detail: 'Connect to an API first. Session may have expired.' }); return true; }
-    if (url.pathname === '/gateway/connection' && req.method === 'GET') { send(200, { baseUrl: session.origin, authenticated: !!session.token }); return true; }
+    if (url.pathname === '/gateway/connection' && req.method === 'GET') { send(200, { connectionId: session.connectionId, baseUrl: session.origin, authenticated: !!session.token }); return true; }
     if (url.pathname.startsWith('/gateway/rest/')) {
+      // The cookie is shared by tabs. A stale client must never silently adopt a
+      // different origin or account after another tab reconnects. This ID is a
+      // revision, not a credential: the HttpOnly cookie still authenticates it.
+      if (req.headers['x-cyberwave-connection'] !== session.connectionId) {
+        send(409, { detail: 'The API connection changed in another tab. Reconnect or reload this example.' }); return true;
+      }
       const path = url.pathname.slice('/gateway/rest'.length);
       let body;
       if (req.method !== 'GET') {

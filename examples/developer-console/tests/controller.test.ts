@@ -21,6 +21,8 @@ test('controller session maps keys into the real simulation input contract and i
     assert.equal(data.packet.data.linear_x, .5);
     assert.equal((await request('input', body)).status, 400);
     assert.equal((await request('input', { ...body, sessionId: 'another', sequence: 2 })).status, 409);
+    assert.equal((await request('close', { sessionId: 'another' })).status, 409);
+    assert.equal((await (await request('state')).json()).active, true, 'A stale tab cannot close another owner');
     const stopped = await request('input', { ...body, sequence: 2, sentAt: Date.now(), keys: [] });
     assert.equal(stopped.status, 200, 'release is never repeat-throttled');
     const state = await (await request('state')).json(); assert.equal(state.received, 2);

@@ -8,6 +8,7 @@ async function start() {
   const controllerContext = await request<{ twinUuid: string }>('/api/controller/context').catch(() => null);
   const targetUuid = controllerContext?.twinUuid || snapshot.twins[0]?.uuid;
   const view = createRobotView(node('robot-scene'), snapshot.anchor);
+  node('fit-robot').addEventListener('click', () => view.fit());
   let mode: 'simulation' | 'live' = 'simulation', disposed = false, polling = false;
   const controls = mountKeyboardController((position, heading) => { if (mode === 'simulation') view.update(position, heading, mode); });
   const selector = node<HTMLSelectElement>('runtime-mode');

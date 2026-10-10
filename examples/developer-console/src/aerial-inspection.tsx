@@ -381,7 +381,7 @@ function App() {
         </section>
       </div>
       <section className="section-gap">
-        <h2>Connect your existing Cyberwave missions</h2>
+        <h2>Connect your Cyberwave workflows & schedules</h2>
         <ConnectedWorkbench>
           {(client) => <WorkflowWorkbench key={client.baseUrl} client={client} />}
         </ConnectedWorkbench>

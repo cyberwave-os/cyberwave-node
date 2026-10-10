@@ -47,11 +47,14 @@ export function createEnvironmentViewer(container: HTMLElement, options: ViewerO
     geometries.forEach(x => x.dispose()); textures.forEach(x => x.dispose());
   }
   function clear() { generation++; disposeObject(root); root.clear(); nodes.clear(); }
-  function fit() {
+  function fit(padding = 1.2) {
     const bounds = new THREE.Box3().setFromObject(root); if (bounds.isEmpty()) return;
     grid.position.z = Math.min(0, bounds.min.z) - .015;
     const center = bounds.getCenter(new THREE.Vector3()), size = bounds.getSize(new THREE.Vector3());
-    const distance = Math.max(size.length(), .8) * 1.45;
+    // Fit the bounding sphere within both viewport axes, including narrow embeds.
+    const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+    const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+    const distance = Math.max(size.length(), .8) / (2 * Math.sin(Math.min(verticalFov, horizontalFov) / 2)) * Math.max(1, padding);
     controls.target.copy(center); camera.position.copy(center).add(new THREE.Vector3(1, -1.6, .9).normalize().multiplyScalar(distance));
     camera.near = Math.max(.005, distance / 10000); camera.far = Math.max(1000, distance * 50); camera.updateProjectionMatrix(); controls.update();
   }

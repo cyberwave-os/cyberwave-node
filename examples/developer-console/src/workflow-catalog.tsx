@@ -43,9 +43,7 @@ export function WorkflowCatalog({
       .then((items) => {
         if (!abort.signal.aborted) {
           setRows(items.filter((w) => !w.is_template));
-          setStatus(
-            `${items.filter((w) => !w.is_template).length} ${view === "scheduled" ? "scheduled " : ""}workflows in this scope.`,
-          );
+          setStatus("");
         }
       })
       .catch((e) => {
@@ -90,6 +88,7 @@ export function WorkflowCatalog({
         <button
           className="cw-button"
           aria-pressed={view === "all"}
+          disabled={busy}
           onClick={() => setView("all")}
         >
           All workflows
@@ -97,6 +96,7 @@ export function WorkflowCatalog({
         <button
           className="cw-button"
           aria-pressed={view === "scheduled"}
+          disabled={busy}
           onClick={() => setView("scheduled")}
         >
           Scheduled
@@ -107,6 +107,7 @@ export function WorkflowCatalog({
             setView("all");
             setShowTemplates(!showTemplates);
           }}
+          disabled={busy}
         >
           Choose template
         </button>
@@ -119,7 +120,8 @@ export function WorkflowCatalog({
         </button>
       </div>
       <p className="status-line" role="status">
-        {status}
+        {status ||
+          `${rows.length} ${view === "scheduled" ? "scheduled " : ""}workflows in this scope.`}
       </p>
       {view === "scheduled" && (
         <p className="note">
@@ -167,7 +169,7 @@ export function WorkflowCatalog({
         <div className="toolbar">
           <button
             className="cw-button"
-            disabled={!page}
+            disabled={busy || !page}
             onClick={() => setPage(page - 1)}
           >
             Previous
@@ -175,7 +177,7 @@ export function WorkflowCatalog({
           <span>Page {page + 1}</span>
           <button
             className="cw-button"
-            disabled={(page + 1) * 20 >= rows.length}
+            disabled={busy || (page + 1) * 20 >= rows.length}
             onClick={() => setPage(page + 1)}
           >
             Next
@@ -189,14 +191,31 @@ export function WorkflowCatalog({
           workflow={selected}
           environmentId={environmentId}
           workspaceId={workspaceId}
+          onBusyChange={setBusy}
           onChange={(w) => {
-            setSelected(w);
-            setRows((old) => old.map((row) => (row.uuid === w.uuid ? w : row)));
+            // A completed save must not replace a newer user selection.
+            setSelected((current) => (current?.uuid === w.uuid ? w : current));
+            setRows((old) => {
+              const matches =
+                view !== "scheduled" ||
+                w.nodes?.some(
+                  (n) =>
+                    n.node_type === "trigger" &&
+                    n.trigger_type === "schedule" &&
+                    !n.is_disabled,
+                );
+              if (!matches) return old.filter((row) => row.uuid !== w.uuid);
+              return old.some((row) => row.uuid === w.uuid)
+                ? old.map((row) => (row.uuid === w.uuid ? w : row))
+                : [w, ...old];
+            });
           }}
           onCreated={(w) => {
             setStatus("Draft created. Configure its inputs before activation.");
             setRows((old) => [w, ...old]);
-            setSelected(w);
+            setSelected((current) =>
+              current?.uuid === selected.uuid ? w : current,
+            );
             setShowTemplates(false);
           }}
         />

@@ -19,7 +19,9 @@ export type AerialDraft = {
   landing: "vertical" | "runway" | "recovery";
   startAt: string;
 };
-export type Point = { x: number; y: number; z: number };
+export type { Position as Point } from "./domain.ts";
+import type { Position as Point } from "./domain.ts";
+import { sampleRoute } from "./simulation.ts";
 export const initialAerialDraft: AerialDraft = {
   objective: "crop-survey",
   aircraft: "multirotor",
@@ -187,23 +189,7 @@ export function routePosition(
   fraction: number,
 ): Point | undefined {
   if (!points.length) return;
-  const lengths = points
-    .slice(1)
-    .map((p, i) =>
-      Math.hypot(p.x - points[i].x, p.y - points[i].y, p.z - points[i].z),
-    );
-  let remaining =
-    lengths.reduce((a, b) => a + b, 0) * Math.min(1, Math.max(0, fraction));
-  for (let i = 0; i < lengths.length; i++) {
-    if (remaining <= lengths[i] && lengths[i] > 0) {
-      const t = remaining / lengths[i];
-      return {
-        x: points[i].x + (points[i + 1].x - points[i].x) * t,
-        y: points[i].y + (points[i + 1].y - points[i].y) * t,
-        z: points[i].z + (points[i + 1].z - points[i].z) * t,
-      };
-    }
-    remaining -= lengths[i];
-  }
-  return points.at(-1);
+  const { duration } = sampleRoute(points, 1, 0);
+  return sampleRoute(points, 1, duration * Math.min(1, Math.max(0, fraction)))
+    .position;
 }

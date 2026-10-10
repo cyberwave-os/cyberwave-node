@@ -143,7 +143,9 @@ export function createCyberwave(options: ClientOptions = {}) {
     for (let start = 0; start < twins.length; start += 6) {
       const batch = await Promise.all(twins.slice(start, start + 6).map(async twin => {
         if (twin.attach_to_twin_uuid) { warnings.push(`${twin.name}: attached frame requires a resolved world pose; omitted.`); return; }
-        let model = assetModel(twin, baseUrl);
+        let model: Model | undefined;
+        try { model = assetModel(twin, baseUrl); }
+        catch { warnings.push(`${twin.name}: invalid model URL; trying its catalog asset.`); }
         if (!model && twin.asset_uuid) {
           try {
             if (!assetCache.has(twin.asset_uuid)) assetCache.set(twin.asset_uuid, assets.get(twin.asset_uuid, opts));

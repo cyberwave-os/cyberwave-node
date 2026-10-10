@@ -182,10 +182,12 @@ function Persistence({
     <div className="workbench-grid">
       <aside className="panel">
         <h3>Choose the owning environment</h3>
-        <EnvironmentBrowser
-          selectedId={environment?.uuid}
-          onSelect={setEnvironment}
-        />
+        <fieldset disabled={busy} className="workflow-fields">
+          <EnvironmentBrowser
+            selectedId={environment?.uuid}
+            onSelect={setEnvironment}
+          />
+        </fieldset>
       </aside>
       <section className="panel">
         <h3>Persist evidence and review</h3>

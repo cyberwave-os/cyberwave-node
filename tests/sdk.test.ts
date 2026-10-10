@@ -53,6 +53,20 @@ test('asset model URLs resolve against their connection; unsafe schemes cannot l
   assert.equal(assetModel({ urdf_file: null, glb_file: '/media/scene.glb' }, 'https://custom.example.com')?.url, 'https://custom.example.com/media/scene.glb');
   assert.throws(() => assetModel({ urdf_file: 'javascript:alert(1)', glb_file: null }, 'https://api.cyberwave.com'));
 });
+test('a malformed twin model cannot prevent other environment objects from loading', async () => {
+  const client = createCyberwave({ fetch: async input => {
+    const path = new URL((input as Request).url).pathname;
+    return response(path.endsWith('/twins') ? [
+      { uuid: 'broken', name: 'Broken', urdf_file: 'http://[broken' },
+      { uuid: 'valid', name: 'Valid', glb_file: 'https://storage.example.com/robot.glb' },
+    ] : {uuid:'environment'});
+  }});
+  const snapshot = await client.loadEnvironment('environment');
+  assert.equal(snapshot.objects.length,2);
+  assert.equal(snapshot.objects[0].model,undefined);
+  assert.equal(snapshot.objects[1].model?.kind,'glb');
+  assert.ok(snapshot.warnings.some(w=>w.includes('invalid model URL')));
+});
 test('URDF resource resolver supports real production Go2 paths, packages and relative resources', () => {
   const model = { kind: 'urdf' as const, url: 'https://static.cyberwave.com/media/urdf_projects/go2/urdf/robot.urdf' };
   const expected = 'https://static.cyberwave.com/media/urdf_projects/go2/dae/base.dae';

@@ -6,6 +6,7 @@ export type Context = { name: string; twinUuid: string; policyUuid: string; tran
 export function mountKeyboardController(onPose?: (position: { x: number; y: number; z: number }, heading: number) => void) {
 let enabled = true, generation = 0;
 const pad = node('pad'), held = new Set<string>();
+const leaseKey = 'cyberwave-example-controller-session';
 let sessionId: string | null = null, sequence = 0, pending = false, polling = false, released = true, disposed = false;
 let pulse: number | undefined;
 let lastSubmit = 0;
@@ -42,8 +43,19 @@ async function activate() {
   if (!enabled || sessionId) return;
   const ownedGeneration = generation;
   node<HTMLButtonElement>('open').disabled = true;
-  try { const context = await request<Context & { sessionId: string }>('/api/controller/open', {});
+  try {
+    // Reloads can interrupt pagehide's close request. Keep only this tab's
+    // owned ID, never adopt a session from the shared gateway state.
+    const previous = sessionStorage.getItem(leaseKey);
+    if (previous) {
+      const response = await fetch('/api/controller/close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: previous }) });
+      if (!response.ok && response.status !== 409) throw new Error('Could not close this tab\'s previous input session. Retry activation.');
+      sessionStorage.removeItem(leaseKey);
+    }
+    if (ownedGeneration !== generation || !enabled || disposed) return;
+    const context = await request<Context & { sessionId: string }>('/api/controller/open', {});
     if (ownedGeneration !== generation || !enabled || disposed) { await request('/api/controller/close', { sessionId: context.sessionId }); return; }
+    sessionStorage.setItem(leaseKey, context.sessionId);
     sessionId = context.sessionId; sequence = 0; held.clear(); released = true; controls();
     node('context').textContent = `${context.name} · ${context.transport} · ${context.contract}`;
     report('Session opened. Input is enabled only while Space is held in the focused pad.'); pad.focus();
@@ -53,7 +65,7 @@ node('open').addEventListener('click', () => void activate());
 async function deactivate() {
   generation++;
   const id = sessionId; release(); sessionId = null; controls();
-  if (id) { try { await request('/api/controller/close', { sessionId: id }); report('Input session closed.'); } catch (error) { report((error as Error).message); throw error; } }
+  if (id) { try { await request('/api/controller/close', { sessionId: id }); sessionStorage.removeItem(leaseKey); report('Input session closed.'); } catch (error) { report((error as Error).message); throw error; } }
 }
 node('close').addEventListener('click', () => void deactivate().catch(() => {}));
 pad.addEventListener('keydown', event => {
@@ -80,9 +92,10 @@ document.getElementById('arc')?.addEventListener('click', () => {
 const heartbeat = window.setInterval(() => { if (held.size || !released) void submit(); }, 100);
 const timer = window.setInterval(async () => {
   if (polling || disposed || !sessionId) return; polling = true;
+  const id = sessionId;
   try { const state = await request<{ active: boolean; received: number; transportError: string;
     preview?: { position: { x: number; y: number; z: number }; heading: number; expired: boolean } }>('/api/controller/state');
-    if (disposed) return;
+    if (disposed || sessionId !== id) return;
     if (!state.active && sessionId) { sessionId = null; held.clear(); controls(); report('Session ended; open a new session to resume.'); }
     if (state.preview && enabled) {
       if (onPose) { if (enabled) onPose(state.preview.position, state.preview.heading); }
