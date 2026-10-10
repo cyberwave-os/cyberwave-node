@@ -12,8 +12,9 @@
     "test": "node --test tests/*.test.ts && pnpm --filter cyberwave-developer-console test",
     "dev": "pnpm --filter cyberwave-developer-console dev",
     "server": "pnpm --filter cyberwave-developer-console server",
-    "build:sdk": "tsc -p tsconfig.json",
-    "pack:check": "node scripts/check-packages.mjs"
+    "build:sdk": "tsc -p tsconfig.json && pnpm recipes:check",
+    "pack:check": "node scripts/check-packages.mjs",
+    "recipes:check": "tsc -p examples/recipes/tsconfig.json"
   },
   "devDependencies": {
     "openapi-typescript": "7.13.0",

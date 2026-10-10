@@ -156,3 +156,6 @@ Example 13 demonstrates a synthetic external work-order inbox: duplicate updates
 The workflow catalog/planner/monitor now come from `@cyberwave/react`, including their styles and typed backend input definitions. `cyberwave` owns reusable input parsing/patch helpers and the generated preview contracts. Example code only chooses scope and its local-write policy.
 
 Example 13 also contains **Verify evidence stored in Cyberwave**. Choose an environment, a campaign and a validated finding; select later stored evidence of covered-target absence and save a reasoned resolution. The branch API records the authenticated reviewer, baseline review, optional external order reference and revision. Reload evidence to verify persistence. In the explicitly named **SDK inspection sandbox**, a button imports a clearly labelled synthetic verification visit for local testing. The synthetic inbox at the top remains browser-only and never closes an external order or accepts a campaign.
+
+
+For application-owned server integrations, see the [typed governance and evidence recipes](../recipes/README.md). They reuse existing workspace metrics, organization credits, Episodes and Datasets. They do not add routes to this example gateway or claim arbitrary image-label training support.

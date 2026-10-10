@@ -218,3 +218,11 @@ The verification component selects stored evidence and appends this review with 
 
 
 Workflow catalogs use the existing `is_template=false` list filter before server pagination when available. Keep `serverPagination` disabled for older deployments that ignore pagination/filter parameters. Typed input patches compare the input contract's exact node revision and preserve static/dynamic binding ownership; reload the configuration after a conflict. The SDK does not introduce another mission or schedule store.
+
+## Evidence and workspace governance recipes
+
+The [typed integration recipes](examples/recipes/README.md) compose existing generated REST APIs: workspace usage and organization credit reporting, recording-window selection as an Episode, and collection of existing Episodes into a Dataset. They add no new service facade or storage primitive. `pnpm recipes:check` checks these examples during the SDK build.
+
+Native Dataset creation currently requires compatible robot-and-camera Episodes. Arbitrary image/video attachments need a reviewed sample-manifest adapter before they can become image-training datasets. Recognizing COCO/CVAT/YOLO on import does not mean those formats support playback or fine-tuning. Credits are organization-scoped; workspace metrics do not enforce budgets or reserve resources.
+
+Integration guides in the documentation: [workspace governance](https://docs.cyberwave.com/enterprise/workspace-governance) and [evidence, datasets and reviewed labels](https://docs.cyberwave.com/feature-reference/datasets/evidence-and-labels). These pages are authored alongside this development branch and become available when its documentation is deployed.
