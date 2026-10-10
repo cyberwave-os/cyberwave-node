@@ -6,6 +6,244 @@
     "description": "Development endpoints and workflow pagination overrides; deployment availability must be checked separately."
   },
   "paths": {
+    "/api/v1/twins/{uuid}/telemetry": {
+      "get": {
+        "operationId": "src_app_api_twins_get_twin_telemetry",
+        "summary": "Get Twin Telemetry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "event_types",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Types"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sensor_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sensor Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwinTelemetryQueryResponseSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get persisted telemetry rows for a twin.\n\nQuery params:\n- start: inclusive start datetime (ISO format)\n- end: inclusive end datetime (ISO format)\n- event_types: optional comma-separated TelemetryEvent values\n- sensor_id: exact metadata.sensor_id; unlabelled twin-wide events are excluded\n- limit: max rows to return (default 100, max 10000)\n- offset: number of rows to skip\n- order: \"asc\" from the start of the window, \"desc\" from its end\n\n``order`` decides which rows a narrow ``limit`` keeps as well as how they\nare sorted. A live view polling a rolling 24h window wants ``desc``:\nunder ``asc`` the cap is spent on the oldest rows and nothing recent\ncomes back.",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/twins/{uuid}/video-sessions": {
+      "post": {
+        "operationId": "src_app_api_twin_video_open_twin_video_session",
+        "summary": "Open Twin Video Session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwinVideoSessionSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Watch an existing producer; never start a camera, recording or controller.\n\nThe browser gathers ICE before submitting. Media flows directly from the SFU.\n409 means no matching producer, 502 refused negotiation, 504 signaling timeout.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwinVideoSessionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/twins/{uuid}/video-sessions/{session_id}/close": {
+      "post": {
+        "operationId": "src_app_api_twin_video_close_twin_video_session",
+        "summary": "Close Twin Video Session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "description": "Idempotent best-effort release of an owned viewer, even after read revocation.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwinVideoCloseInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
     "/api/v1/workflow-actions": {
       "get": {
         "operationId": "src_app_api_workflow_actions_list_workflow_actions",
@@ -1159,6 +1397,66 @@
   },
   "components": {
     "schemas": {
+      "TwinVideoSessionInput": {
+        "properties": {
+          "sdp_offer": {
+            "maxLength": 65536,
+            "title": "Sdp Offer",
+            "type": "string"
+          },
+          "sensor_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Sensor Id",
+            "type": "string"
+          },
+          "stream_source": {
+            "default": "live",
+            "enum": [
+              "live",
+              "simulation"
+            ],
+            "title": "Stream Source",
+            "type": "string"
+          },
+          "stream_instance_id": {
+            "default": "default",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Stream Instance Id",
+            "type": "string"
+          },
+          "frontend_type": {
+            "default": "rgb",
+            "enum": [
+              "rgb",
+              "depth"
+            ],
+            "title": "Frontend Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sdp_offer",
+          "sensor_id"
+        ],
+        "title": "TwinVideoSessionInput",
+        "type": "object"
+      },
+      "TwinVideoCloseInput": {
+        "properties": {
+          "close_token": {
+            "maxLength": 2048,
+            "title": "Close Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "close_token"
+        ],
+        "title": "TwinVideoCloseInput",
+        "type": "object"
+      },
       "HumanActionResponse": {
         "properties": {
           "decision": {
@@ -1513,6 +1811,66 @@
           "assessment"
         ],
         "title": "CreateInspectionReviewInput",
+        "type": "object"
+      },
+      "TwinTelemetryQueryResponseSchema": {
+        "description": "Paginated response for generic twin telemetry rows.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TwinTelemetryRecordSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "has_more"
+        ],
+        "title": "TwinTelemetryQueryResponseSchema",
+        "type": "object"
+      },
+      "TwinVideoSessionSchema": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "sdp_answer": {
+            "title": "Sdp Answer",
+            "type": "string"
+          },
+          "close_token": {
+            "title": "Close Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "sdp_answer",
+          "close_token"
+        ],
+        "title": "TwinVideoSessionSchema",
         "type": "object"
       },
       "HumanActionSchema": {
@@ -2917,6 +3275,58 @@
           "kind"
         ],
         "title": "InspectionObservationInput",
+        "type": "object"
+      },
+      "TwinTelemetryRecordSchema": {
+        "description": "Schema for generic persisted twin telemetry rows.",
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "twin_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Twin Uuid"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          }
+        },
+        "required": [
+          "uuid",
+          "timestamp",
+          "event_type",
+          "metadata"
+        ],
+        "title": "TwinTelemetryRecordSchema",
         "type": "object"
       },
       "WorkflowInputFieldSchema": {

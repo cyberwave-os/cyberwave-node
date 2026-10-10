@@ -1,6 +1,7 @@
 import "./example-shell.css";
 import { mountHeaderConnection } from "./header-connection.tsx";
 const groups = [
+  { name: "Video & telemetry", items: [["/sensor-video.html", "16 · Sensor video"], ["/sensor-telemetry.html", "17 · Sensor telemetry"]] },
   { name: "Human review & training", items: [["/human-evidence.html", "14 · Human actions & evidence"], ["/image-annotation.html", "15 · Capture & annotation"]] },
   {
     name: "SDK components",

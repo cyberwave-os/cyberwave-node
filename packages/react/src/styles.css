@@ -24,3 +24,7 @@
 .cw-workflows pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:320px; overflow:auto; }
 .cw-workflows .comparison { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
 .cw-workflows :focus-visible { outline:2px solid var(--cw-accent); outline-offset:3px; }
+
+.cw-telemetry-row { padding: 12px 0; border-bottom: 1px solid var(--cw-border, #293745); }
+.cw-telemetry-row summary { cursor: pointer; overflow-wrap: anywhere; }
+.cw-telemetry-data { overflow: auto; max-height: 360px; font-size: 12px; }

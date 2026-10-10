@@ -9,8 +9,8 @@ const extensions = new URL('../schema/extensions.openapi.json', import.meta.url)
 const extensionSource = process.argv.find(arg => arg.startsWith('--extensions-from='))?.split('=').slice(1).join('=');
 if (extensionSource) {
   const full = JSON.parse(await readFile(extensionSource, 'utf8'));
-  const paths = Object.fromEntries(Object.entries(full.paths).filter(([path]) => /\/environments\/\{uuid\}\/(inspection-|missions$)/.test(path) || /\/workspaces\/\{workspace_uuid\}\/missions$/.test(path) || /\/workflows(?:$|\/\{uuid\}\/(?:input-contract|executions)$)/.test(path) || /\/workflow-actions(?:$|\/\{uuid\}(?:$|\/respond$))/.test(path) || /\/mlmodels\/structured-actions$/.test(path) || /\/datasets\/(?:collections$|\{uuid\}\/samples(?:$|\/\{sample_uuid\}\/review$))/.test(path)));
-  if (Object.keys(paths).length !== 16) throw new Error('Expected inspection, workflow, human action and dataset sample contracts');
+  const paths = Object.fromEntries(Object.entries(full.paths).filter(([path]) => /\/environments\/\{uuid\}\/(inspection-|missions$)/.test(path) || /\/workspaces\/\{workspace_uuid\}\/missions$/.test(path) || /\/workflows(?:$|\/\{uuid\}\/(?:input-contract|executions)$)/.test(path) || /\/workflow-actions(?:$|\/\{uuid\}(?:$|\/respond$))/.test(path) || /\/mlmodels\/structured-actions$/.test(path) || /\/twins\/\{uuid\}\/(?:telemetry$|video-sessions(?:$|\/\{session_id\}\/close$))/.test(path) || /\/datasets\/(?:collections$|\{uuid\}\/samples(?:$|\/\{sample_uuid\}\/review$))/.test(path)));
+  if (Object.keys(paths).length !== 19) throw new Error('Expected inspection, workflow, human action, dataset sample and sensor contracts');
   const schemas = {}, queue = [paths];
   while (queue.length) {
     const node = queue.shift();

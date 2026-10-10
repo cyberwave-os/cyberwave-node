@@ -43,3 +43,5 @@ The [interactive example](../developer-console/human-evidence.html) and platform
 ## Validation
 
 `pnpm recipes:check` checks the recipes against the generated contract. `pnpm test` includes HTTP-response tests for scope, error handling, recording readiness and mutation outcomes. These checks do not claim live media conversion or training was performed.
+
+- [Video and sensor composition](video-and-sensors.ts): discover sensors, attach receive-only video, read a sensor time window and consume a host-owned IMU subscription. See the [custom UI guide](../../docs/custom-ui.md) for deployment and lifecycle details.

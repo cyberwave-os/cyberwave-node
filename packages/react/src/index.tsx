@@ -94,3 +94,5 @@ export { WorkflowCatalog } from './workflow-catalog.js';
 export { WorkflowPlanner } from './workflow-planner.js';
 export { WorkflowMonitor, workflowError } from './workflow-monitor.js';
 export { InspectionVerificationPanel } from './inspection-verification.js';
+
+export { SensorTelemetryPanel, useSensorTelemetry } from './sensor-telemetry.js';

@@ -27,7 +27,11 @@
       "types": "./dist/annotation/index.d.ts",
       "import": "./dist/annotation/index.js"
     },
-    "./annotation.css": "./dist/annotation.css"
+    "./annotation.css": "./dist/annotation.css",
+    "./video": {
+      "types": "./dist/video.d.ts",
+      "import": "./dist/video.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && cp src/styles.css src/annotation.css dist/"

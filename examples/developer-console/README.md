@@ -19,10 +19,12 @@ Fifteen examples share the official `cyberwave` client, optional React/3D packag
 | Maintenance | [13 · Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) | Duplicate updates, verification evidence and delivery coverage. |
 | Human review & training | [14 · Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) | Workflow actions, consent and reviewed image collections. |
 | Human review & training | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) | Camera/video frames, boxes, polygons and backend ML tasks. |
+| Video & telemetry | [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) | Backend sensor catalog, live/simulation source selection, receive-only WebRTC and frame capture. |
+| Video & telemetry | [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) | Exact sensor history, fixed time windows, pagination and a live-subscription integration snippet. |
 
 ## Production, local and custom connections
 
-Open **API** in the header to select production, localhost or a custom origin. The same `ConnectionPanel` serves all fifteen examples; page-level duplicates have been removed. Changing connection reloads the example and clears drafts, selections, models and previews. Export drafts first. Navigation between examples restores the gateway session. **Reset to public** replaces it with an anonymous production session. The page and header share one initialization request so a first visit cannot race two cookie sessions.
+Open **API** in the header to select production, localhost or a custom origin. The same `ConnectionPanel` serves all seventeen examples; page-level duplicates have been removed. Changing connection reloads the example and clears drafts, selections, models and previews. Export drafts first. Navigation between examples restores the gateway session. **Reset to public** replaces it with an anonymous production session. The page and header share one initialization request so a first visit cannot race two cookie sessions.
 
 The shared API header on every example defaults to `https://api.cyberwave.com`. Connect anonymously for public assets; enter a Cyberwave API token for private environments. Use `http://localhost:8000` or any custom HTTPS API origin for integration testing. Changing origins clears the scene and requires a new credential choice. Tokens stay in the local gateway's memory; storage/model-resource downloads never receive them.
 
@@ -38,7 +40,7 @@ Copy `.env.example` to `.env`, select `DEMO_MODE=connected`, and set a loopback 
 
 The token stays on the server and never enters `VITE_*` variables or browser responses. The BFF binds only to loopback and accepts the example's local browser origin. It has no partner login or production session management; a public deployment needs the authentication and authorization work described in the root SDK README.
 
-The app reads twins and saved waypoints, polls REST snapshots/action status, and displays an authenticated latest-camera-frame image. Relative waypoint frames are omitted pending explicit server resolution. Camera snapshots are not WebRTC streaming; the future media adapter can supply a MediaStream through the same presentation boundary.
+The app reads twins and saved waypoints, polls REST snapshots/action status, and displays an authenticated latest-camera-frame image. Relative waypoint frames are omitted pending explicit server resolution. Example 04 uses camera snapshots. Example 16 provides a separate receive-only WebRTC viewer through the authenticated backend signaling bridge.
 
 Navigation execution is disabled by default. To use the explicit Start button with an authorized device, set `CYBERWAVE_ALLOW_EXECUTION=true` and verify calibration before setting `DEMO_GEOREF_VERIFIED=true`. Cyberwave validates the target and navigation request at dispatch. Cancel submits a cancellation request, without claiming an immediate physical stop.
 
@@ -171,3 +173,9 @@ Open [Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) from 
 [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) opens local photos or a real Dataset sample, captures camera frames, edits boxes/polygons and saves an explicit sample review. The shared header controls the target API. Enter a model UUID to load supported image tasks from the backend and explicitly run one; remote writes remain disabled in this demo. Masks remain model proposals until reviewed, with no fabricated mask-to-box conversion. See the [React annotation guide](../../packages/react/ANNOTATION.md) and [training export](../training/README.md).
 
 For a queued model, the panel shows the accepted execution ID and status. **Stop monitoring** stops browser reads while the backend job continues; **Resume monitoring** reads the same execution without another inference submission. The resume handle belongs to the current API connection, image and task; changing these or reloading clears it. Monitoring times out after five minutes, leaving the accepted ID available to resume. Only canonical, task-compatible completed results reach the overlay. HTTP errors and failed jobs remain visible.
+
+## Dedicated sensor examples
+
+Examples 16 and 17 share environment/twin/sensor selection, the API header and SDK hooks. Sensors come from backend-resolved capabilities. The video example requires an active RGB/depth producer, the new backend video routes, and a reachable SFU; it consumes live or simulation video without starting a producer or issuing control commands. Configure deployment ICE servers in its advanced control if needed. Its POST negotiation is allowed only against authenticated local APIs in this development BFF. Stop viewing before changing API connections. The telemetry example reads persisted samples in a fixed window and shows a real-time integration snippet; it does not connect to MQTT or simulate data.
+
+See the [custom UI guide](../../docs/custom-ui.md) for auth, source identity, lifecycle, error states, clocks, styling, recording capture and remaining deployment capabilities.

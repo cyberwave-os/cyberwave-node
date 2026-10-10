@@ -13,6 +13,10 @@ export type WorkflowInputContract = ExtensionComponents['schemas']['WorkflowInpu
 export type Asset = components['schemas']['AssetSchema'];
 export type Environment = components['schemas']['EnvironmentSchema'];
 export type Twin = components['schemas']['TwinSchema'];
+export type VideoSession = ExtensionComponents['schemas']['TwinVideoSessionSchema'];
+export type TwinTelemetryQuery = NonNullable<paths['/api/v1/twins/{uuid}/telemetry']['get']['parameters']['query']>;
+export { twinSensors, subscribeSensorTelemetry } from './sensors.js';
+export type { TwinSensor, SensorTelemetryTransport, SensorTelemetrySample } from './sensors.js';
 /** Preview contract: requires a backend with the inspection extension deployed. */
 export type InspectionCampaign = ExtensionComponents['schemas']['InspectionCampaignDetailSchema'];
 export type InspectionManifest = ExtensionComponents['schemas']['ImportInspectionCampaignInput'];
@@ -103,6 +107,17 @@ export function createCyberwave(options: ClientOptions = {}) {
     list: (query: { search?: string; registry_id?: string; limit?: number; offset?: number; public_only?: boolean } = {}, opts: ReadOptions = {}) =>
       data(rest.GET('/api/v1/assets', { params: { query }, ...opts })),
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/assets/{uuid}', { params: { path: { uuid } }, ...opts })),
+  };
+  const twins = {
+    get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{uuid}', { params: { path: { uuid } }, ...opts })),
+    async telemetry(uuid: string, query: TwinTelemetryQuery, opts: ReadOptions = {}) {
+      const page = await data(rest.GET('/api/v1/twins/{uuid}/telemetry', { params: { path: { uuid }, query }, ...opts }));
+      if (query.sensor_id && page.items.some(row => row.metadata.sensor_id !== query.sensor_id))
+        throw new Error('This backend did not apply the sensor filter. Deploy the sensor telemetry API before displaying these rows.');
+      return page;
+    },
+    openVideo: (uuid: string, body: ExtensionComponents['schemas']['TwinVideoSessionInput'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/twins/{uuid}/video-sessions', { params: { path: { uuid } }, body, ...opts })),
+    closeVideo: (uuid: string, session: VideoSession, opts: ReadOptions = {}) => data(rest.POST('/api/v1/twins/{uuid}/video-sessions/{session_id}/close', { params: { path: { uuid, session_id: session.session_id } }, body: { close_token: session.close_token }, ...opts })),
   };
   const modelExecution = (execution_uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/mlmodels/executions/{execution_uuid}', { params: { path: { execution_uuid } }, ...opts }));
   /** Existing model runs and durable execution records; submission is never retried. */
@@ -198,7 +213,7 @@ export function createCyberwave(options: ClientOptions = {}) {
     }
     return { environment, twins, objects, warnings };
   }
-  return { baseUrl, rest, environments, assets, missions, workflows, recordings, inspections, datasets, humanActions, mlmodels, loadEnvironment };
+  return { baseUrl, rest, environments, assets, twins, missions, workflows, recordings, inspections, datasets, humanActions, mlmodels, loadEnvironment };
 }
 export type CyberwaveClient = ReturnType<typeof createCyberwave>;
 

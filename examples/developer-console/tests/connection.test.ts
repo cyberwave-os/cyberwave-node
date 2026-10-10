@@ -178,3 +178,19 @@ test('image model tasks reuse public routes with bounded authenticated local ima
     assert.equal(calls.length,4);assert.equal(calls.at(-1).opts.headers.Authorization,'Bearer local-only-secret');
   });
 });
+
+test('sensor history reuses scoped reads and video signaling remains authenticated and local', async () => {
+  const calls = [];
+  await run(async (url, opts) => { calls.push({ url: String(url), opts }); return Response.json({}); }, async request => {
+    await request('/gateway/connection', 'POST', { baseUrl: 'https://api.cyberwave.com', token: 'remote-token' });
+    assert.equal((await request('/gateway/rest/api/v1/twins/robot')).status, 200);
+    assert.equal((await request('/gateway/rest/api/v1/twins/robot/telemetry?sensor_id=front&limit=20')).status, 200);
+    assert.match(calls.at(-1).url, /sensor_id=front/);
+    assert.equal((await request('/gateway/rest/api/v1/twins/robot/video-sessions', 'POST', {})).status, 405);
+    await request('/gateway/connection', 'POST', { baseUrl: 'http://localhost:8000' });
+    for (const path of ['video-sessions', 'video-sessions/whep_abcdef123456/close'])
+      assert.equal((await request(`/gateway/rest/api/v1/twins/robot/${path}`, 'POST', {})).status, 200);
+    assert.equal((await request('/gateway/rest/api/v1/twins/robot/command', 'POST', {})).status, 405);
+    assert.equal(calls.length, 4);
+  });
+});

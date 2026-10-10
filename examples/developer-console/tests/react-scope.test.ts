@@ -94,3 +94,52 @@ test('recording cursors belong to their API client as well as environment', asyn
     assert.equal(requests[0].searchParams.has('cursor'), false);
   });
 });
+
+test('sensor history clears the old sensor rows and resets its offset before the next request', async () => {
+  const { SensorTelemetryPanel } = await import('@cyberwave/react');
+  const requests: URL[] = [];
+  const client = createCyberwave({ fetch: async request => {
+    const url = new URL((request as Request).url); requests.push(url);
+    if (url.searchParams.get('sensor_id') === 'rear') return new Promise<Response>(() => {});
+    return Response.json({ items: [{ uuid: 'old-sample', timestamp: '2026-10-10T10:00:00Z', event_type: 'twin_imu_update', metadata: { sensor_id: 'front', acceleration: [0,0,9.8] } }], total: 42, has_more: true });
+  } });
+  const view = (sensorId: string) => h(CyberwaveProvider, { client, children: h(SensorTelemetryPanel, { twinUuid: 'robot', sensorId, start: '2026-10-10T00:00:00Z', end: '2026-10-11T00:00:00Z' }) });
+  await mounted(async ({ render, click, element }) => {
+    await render(view('front')); await click('Older');
+    assert.match(element.textContent!, /acceleration/);
+    await render(view('rear'));
+    assert.equal(requests.at(-1)?.searchParams.get('offset'), '0');
+    assert.equal(requests.at(-1)?.searchParams.get('sensor_id'), 'rear');
+    assert.doesNotMatch(element.textContent!, /acceleration|front/);
+  });
+});
+
+test('video source changes, disabling and unmount close pending peers and detach the old video', async () => {
+  const { VideoStream } = await import('@cyberwave/react/video');
+  const peers: any[] = [];
+  class Peer extends EventTarget {
+    connectionState = 'new'; iceGatheringState = 'gathering'; closed = false;
+    constructor() { super(); peers.push(this); }
+    addTransceiver() {}
+    async createOffer() { return { sdp: 'v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\na=rtpmap:96 VP8/90000\r\n' }; }
+    async setLocalDescription() {}
+    close() { this.closed = true; this.connectionState = 'closed'; this.dispatchEvent(new Event('connectionstatechange')); }
+  }
+  const previous = { RTCPeerConnection: globalThis.RTCPeerConnection, MediaStream: globalThis.MediaStream };
+  Object.assign(globalThis, { RTCPeerConnection: Peer, MediaStream: class { getTracks() { return []; } } });
+  const client = createCyberwave({ fetch: async () => assert.fail('no signaling before ICE completes') });
+  const view = (streamSource: 'live' | 'simulation', enabled = true) => h(CyberwaveProvider, { client, children: h(VideoStream, { target: { twinUuid: 'robot', sensorId: 'front', streamSource }, enabled }) });
+  try {
+    await mounted(async ({ render, element }) => {
+      await render(view('live')); const oldVideo = element.querySelector('video');
+      await render(view('simulation'));
+      assert.equal(peers[0].closed, true); assert.notEqual(element.querySelector('video'), oldVideo);
+      assert.equal((oldVideo as HTMLVideoElement).srcObject, null);
+      await render(view('simulation', false)); assert.equal(peers[1].closed, true);
+      await render(view('live'));
+      await act(async () => window.dispatchEvent(new window.Event('pagehide')));
+      assert.equal(peers.at(-1).closed, true, 'Full-page navigation also disposes the viewer');
+    });
+    assert.equal(peers.at(-1).closed, true);
+  } finally { Object.assign(globalThis, previous); }
+});
