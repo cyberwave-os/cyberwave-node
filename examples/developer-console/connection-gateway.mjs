@@ -10,6 +10,8 @@ const governanceRead = /^\/api\/v1\/workspaces\/[a-zA-Z0-9-]+\/missions$/;
 const workflowCommand = /^\/api\/v1\/workflows\/(?:[a-zA-Z0-9-]+\/(?:clone|activate|deactivate|execute)|executions\/[a-zA-Z0-9-]+\/cancel)$/;
 const workflowEdit = /^\/api\/v1\/workflows\/[a-zA-Z0-9-]+(?:\/nodes\/[a-zA-Z0-9-]+)?$/;
 const workflowRead = /^\/api\/v1\/workflows(?:\/[a-zA-Z0-9-]+(?:\/(?:input-contract|executions(?:\/[a-zA-Z0-9-]+)?))?)?$/;
+const evidenceRead = /^\/api\/v1\/(?:workflow-actions(?:\/[a-zA-Z0-9-]+)?|datasets(?:\/[a-zA-Z0-9-]+(?:\/samples)?)?)$/;
+const evidenceWrite = /^\/api\/v1\/(?:workflow-actions\/[a-zA-Z0-9-]+\/respond|datasets\/(?:collections|[a-zA-Z0-9-]+\/samples(?:\/[a-zA-Z0-9-]+\/review)?))$/;
 export function createConnectionGateway({ localToken, localOrigin = 'http://localhost:8000' } = {}, transport = fetch) {
   const sessions = new Map();
   function registerResources(data, session) {
@@ -23,6 +25,12 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
       session.files.add(url.href);
       const project = url.href.match(/^(.*\/urdf_projects\/[^/]+\/)/)?.[1];
       if (project) session.roots.add(project);
+    }
+    // Media references from typed human-action/sample envelopes only; do not
+    // recurse arbitrary workflow metadata into the storage allowlist.
+    if (Array.isArray(data.items)) data.items.forEach(row => registerResources(row, session));
+    if ((typeof data.source_sha256 === 'string' || typeof data.workflow_name === 'string') && typeof data.file_url === 'string') {
+      try { const url = new URL(data.file_url); if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) session.files.add(url.href); } catch {}
     }
     // Playback envelopes: register exact signed camera URLs, never arbitrary metadata URLs.
     for (const entry of Object.values(data.items?.twin_data || {})) {
@@ -67,12 +75,12 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
       if (req.method !== 'GET') {
         const local = ['localhost','127.0.0.1','[::1]'].includes(new URL(session.origin).hostname);
         const permitted =
-          (req.method === 'POST' && (inspectionWrite.test(path) || workflowCommand.test(path))) ||
+          (req.method === 'POST' && (inspectionWrite.test(path) || workflowCommand.test(path) || evidenceWrite.test(path))) ||
           (req.method === 'PUT' && workflowEdit.test(path));
         if (!permitted || !local || !session.token) { send(405, { detail: 'Only authenticated local inspection and workflow writes are enabled.' }); return true; }
         body = ''; for await (const chunk of req) { body += chunk; if (Buffer.byteLength(body) > 1024*1024) { send(413,{detail:'Request body too large'}); return true; } }
         if (body) JSON.parse(body); else body = undefined;
-      } else if (!allowed.test(path) && !inspectionRead.test(path) && !governanceRead.test(path) && !workflowRead.test(path)) { send(403, { detail: 'Unsupported read operation' }); return true; }
+      } else if (!allowed.test(path) && !inspectionRead.test(path) && !governanceRead.test(path) && !workflowRead.test(path) && !evidenceRead.test(path)) { send(403, { detail: 'Unsupported read operation' }); return true; }
       const upstream = await transport(new URL(path + url.search, session.origin), { method:req.method, body, redirect: 'error', signal: AbortSignal.timeout(20000), headers: { ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}), ...(body ? {'Content-Type':'application/json'} : {}) } });
       if (!upstream.ok) {
         const error = await upstream.json().catch(() => ({}));

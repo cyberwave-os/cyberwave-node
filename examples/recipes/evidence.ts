@@ -37,3 +37,28 @@ export async function readDataset(client: CyberwaveClient, uuid: string, signal?
   if (!result.response.ok) throw new CyberwaveError(result.response.status, result.error);
   return result.data!;
 }
+
+/** Preview backend: append existing media without manufacturing a robot Episode. */
+export async function appendEvidence(client: CyberwaveClient, datasetUuid: string, attachmentUuid: string, signal?: AbortSignal) {
+  const result = await client.rest.POST('/api/v1/datasets/{uuid}/samples', {
+    params: { path: { uuid: datasetUuid } }, body: { attachment_uuid: attachmentUuid }, signal,
+  });
+  if (!result.response.ok) throw new CyberwaveError(result.response.status, result.error);
+  return result.data!; // Repeated attachment membership returns the same sample; labels stay pending.
+}
+
+/** Paginated, reviewed samples; signed media URLs are short-lived, never persist them as evidence IDs. */
+export async function* approvedEvidence(client: CyberwaveClient, datasetUuid: string, signal?: AbortSignal) {
+  let after = 0;
+  do {
+    const result = await client.rest.GET('/api/v1/datasets/{uuid}/samples', {
+      params: { path: { uuid: datasetUuid }, query: { after, limit: 100, approved_only: true } }, signal,
+    });
+    if (!result.response.ok) throw new CyberwaveError(result.response.status, result.error);
+    const page = result.data!;
+    yield* page.items;
+    if (page.next_after == null) return;
+    if (page.next_after <= after) throw new Error('Dataset pagination did not advance');
+    after = page.next_after;
+  } while (!signal?.aborted);
+}

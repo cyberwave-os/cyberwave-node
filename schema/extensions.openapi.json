@@ -6,6 +6,161 @@
     "description": "Development endpoints and workflow pagination overrides; deployment availability must be checked separately."
   },
   "paths": {
+    "/api/v1/workflow-actions": {
+      "get": {
+        "operationId": "src_app_api_workflow_actions_list_workflow_actions",
+        "summary": "List Workflow Actions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workspace Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HumanActionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Workflow actions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-actions/{uuid}": {
+      "get": {
+        "operationId": "src_app_api_workflow_actions_get_workflow_action",
+        "summary": "Get Workflow Action",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HumanActionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Workflow actions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-actions/{uuid}/respond": {
+      "post": {
+        "operationId": "src_app_api_workflow_actions_respond_workflow_action",
+        "summary": "Respond Workflow Action",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HumanActionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Workflow actions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HumanActionResponse"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
     "/api/v1/workflows": {
       "get": {
         "operationId": "src_app_api_workflows_list_workflows",
@@ -319,6 +474,203 @@
           }
         },
         "description": "List all executions for a workflow.",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/datasets/collections": {
+      "post": {
+        "operationId": "src_app_api_dataset_samples_create_sample_collection",
+        "summary": "Create Sample Collection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSchema"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleCollectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/datasets/{uuid}/samples": {
+      "post": {
+        "operationId": "src_app_api_dataset_samples_append_dataset_sample",
+        "summary": "Append Dataset Sample",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSampleSchema"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleAppendInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "src_app_api_dataset_samples_list_dataset_samples",
+        "summary": "List Dataset Samples",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "default": 0,
+              "title": "After",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "approved_only",
+            "schema": {
+              "default": false,
+              "title": "Approved Only",
+              "type": "boolean"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSamplesPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/datasets/{uuid}/samples/{sample_uuid}/review": {
+      "post": {
+        "operationId": "src_app_api_dataset_samples_review_dataset_sample",
+        "summary": "Review Dataset Sample",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "sample_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Sample Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSampleSchema"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleReviewInput"
+              }
+            }
+          },
+          "required": true
+        },
         "security": [
           {
             "CustomTokenAuthentication": []
@@ -787,6 +1139,42 @@
   },
   "components": {
     "schemas": {
+      "HumanActionResponse": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected",
+              "completed"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Note",
+            "type": "string"
+          },
+          "attachment_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Uuid"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "HumanActionResponse",
+        "type": "object"
+      },
       "WorkflowCreateSchema": {
         "properties": {
           "name": {
@@ -929,6 +1317,86 @@
         "title": "WorkflowCreateSchema",
         "type": "object"
       },
+      "SampleCollectionInput": {
+        "properties": {
+          "name": {
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Name",
+            "type": "string"
+          },
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SampleCollectionInput",
+        "type": "object"
+      },
+      "SampleAppendInput": {
+        "properties": {
+          "attachment_uuid": {
+            "format": "uuid",
+            "title": "Attachment Uuid",
+            "type": "string"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/SampleAnnotation"
+            },
+            "maxItems": 500,
+            "title": "Annotations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attachment_uuid"
+        ],
+        "title": "SampleAppendInput",
+        "type": "object"
+      },
+      "SampleReviewInput": {
+        "properties": {
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/SampleAnnotation"
+            },
+            "maxItems": 500,
+            "title": "Annotations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "revision",
+          "status"
+        ],
+        "title": "SampleReviewInput",
+        "type": "object"
+      },
       "ImportInspectionCampaignInput": {
         "additionalProperties": false,
         "properties": {
@@ -1025,6 +1493,124 @@
           "assessment"
         ],
         "title": "CreateInspectionReviewInput",
+        "type": "object"
+      },
+      "HumanActionSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "format": "uuid",
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "execution_uuid": {
+            "format": "uuid",
+            "title": "Execution Uuid",
+            "type": "string"
+          },
+          "workspace_uuid": {
+            "format": "uuid",
+            "title": "Workspace Uuid",
+            "type": "string"
+          },
+          "workflow_name": {
+            "title": "Workflow Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "instructions": {
+            "title": "Instructions",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "attachment_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Uuid"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "source_changed": {
+            "title": "Source Changed",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          },
+          "notification_sent": {
+            "title": "Notification Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "execution_uuid",
+          "workspace_uuid",
+          "workflow_name",
+          "title",
+          "instructions",
+          "kind",
+          "status",
+          "attachment_uuid",
+          "file_url",
+          "source_changed",
+          "expires_at",
+          "response",
+          "notification_sent"
+        ],
+        "title": "HumanActionSchema",
         "type": "object"
       },
       "WorkflowSchema": {
@@ -1251,6 +1837,385 @@
           "fields"
         ],
         "title": "WorkflowInputContractSchema",
+        "type": "object"
+      },
+      "DatasetSchema": {
+        "properties": {
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          },
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "episodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Episodes",
+            "type": "array"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "processed_datasets": {
+            "items": {
+              "$ref": "#/components/schemas/ProcessedDatasetSchema"
+            },
+            "title": "Processed Datasets",
+            "type": "array"
+          },
+          "processing_status": {
+            "title": "Processing Status",
+            "type": "string"
+          },
+          "is_ready": {
+            "title": "Is Ready",
+            "type": "boolean"
+          },
+          "is_imported": {
+            "default": false,
+            "title": "Is Imported",
+            "type": "boolean"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Format"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "visibility": {
+            "default": "private",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "total_episodes": {
+            "title": "Total Episodes",
+            "type": "integer"
+          },
+          "processed_episodes": {
+            "title": "Processed Episodes",
+            "type": "integer"
+          },
+          "failed_episodes": {
+            "title": "Failed Episodes",
+            "type": "integer"
+          },
+          "failed_episode_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Episode Uuids",
+            "type": "array"
+          },
+          "failed_details": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Failed Details",
+            "type": "array"
+          },
+          "skipped_episodes": {
+            "default": 0,
+            "title": "Skipped Episodes",
+            "type": "integer"
+          },
+          "skipped_episode_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped Episode Uuids",
+            "type": "array"
+          },
+          "waiting_on_recordings_episode_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Waiting On Recordings Episode Uuids",
+            "type": "array"
+          },
+          "cameras": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cameras"
+          },
+          "fps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fps"
+          },
+          "robot_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Robot Type"
+          },
+          "action_dim": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Dim"
+          },
+          "state_dim": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Dim"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "required": [
+          "uuid",
+          "episodes",
+          "metadata",
+          "processed_datasets",
+          "processing_status",
+          "is_ready",
+          "total_episodes",
+          "processed_episodes",
+          "failed_episodes",
+          "failed_episode_uuids",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DatasetSchema",
+        "type": "object"
+      },
+      "DatasetSampleSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "attachment_uuid": {
+            "format": "uuid",
+            "title": "Attachment Uuid",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "source_changed": {
+            "title": "Source Changed",
+            "type": "boolean"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/SampleAnnotation"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Uuid"
+          }
+        },
+        "required": [
+          "uuid",
+          "attachment_uuid",
+          "source_sha256",
+          "source_changed",
+          "file_url",
+          "annotations",
+          "provenance",
+          "review_status",
+          "revision",
+          "created_at",
+          "reviewed_at",
+          "reviewed_by_uuid"
+        ],
+        "title": "DatasetSampleSchema",
+        "type": "object"
+      },
+      "DatasetSamplesPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetSampleSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After"
+          }
+        },
+        "required": [
+          "items",
+          "next_after"
+        ],
+        "title": "DatasetSamplesPage",
         "type": "object"
       },
       "InspectionCampaignDetailSchema": {
@@ -1723,6 +2688,31 @@
         "title": "InspectionAssessmentInput",
         "type": "object"
       },
+      "SampleAnnotation": {
+        "properties": {
+          "label": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox",
+            "type": "array"
+          }
+        },
+        "required": [
+          "label",
+          "bbox"
+        ],
+        "title": "SampleAnnotation",
+        "type": "object"
+      },
       "InspectionObservationInput": {
         "additionalProperties": false,
         "properties": {
@@ -1931,6 +2921,51 @@
           "source"
         ],
         "title": "WorkflowInputFieldSchema",
+        "type": "object"
+      },
+      "ProcessedDatasetSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "error_message": {
+            "title": "Error Message",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "format",
+          "status",
+          "path",
+          "error_message",
+          "metadata",
+          "created_at"
+        ],
+        "title": "ProcessedDatasetSchema",
         "type": "object"
       },
       "WorkflowNodeSchema": {

@@ -13,7 +13,7 @@ const client = createCyberwave({
 });
 ```
 
-Use an application-owned session/BFF for browser applications; keep service tokens on the server. The developer-console gateway does not expose the metrics, credits, Episode or Dataset routes used here. Its workflow/inspection write routes remain local-only.
+Use an application-owned session/BFF for browser applications; keep service tokens on the server. The developer-console gateway does not expose the metrics, credits, Episode or Episode-based Dataset creation routes used here. Its workflow/inspection write routes remain local-only.
 
 ## Workspace governance
 
@@ -32,7 +32,13 @@ This is reporting. It does not reserve credits, robots or compute, establish wor
 
 Mutations are not automatically retried. A timeout has an unknown outcome: reconcile existing rows before a user repeats a save. Cancellation stops waiting, not necessarily a server-side mutation. Creating an Episode and creating a Dataset are separate operations; do not promise a transaction or delete a reusable Episode after a later failure.
 
-Native Dataset creation is robotics-oriented. It cannot create an empty evidence collection or a dataset from image Attachment IDs. COCO/CVAT/YOLO format detection on import does not establish playback, reviewed annotation storage or detector fine-tuning support. Dataset metadata updates replace data and do not provide revision-safe annotation editing. Keep source evidence in Recordings/Attachments; extend the existing Dataset pipeline with a reviewed, versioned sample manifest when implementing image training.
+Native Episode-based Dataset creation remains robotics-oriented. The preview backend also supports `POST /datasets/collections` and sample append/review endpoints. `appendEvidence` reuses an existing Attachment; `approvedEvidence` paginates approved samples. Proposed labels remain pending, and changed source bytes fail approved exports.
+
+## Human actions and image training
+
+`human-actions.ts` lists assigned actions and submits an explicit response through generated REST calls. The backend enforces assignee access, deadlines, idempotency and resume. A photo action first uses the existing Attachment create/upload APIs, then submits its UUID with `decision: "completed"`.
+
+The [interactive example](../developer-console/human-evidence.html) and platform inbox show these flows. The [training recipe](../training/README.md) exports reviewed images and boxes to YOLO with checksums and reviewer provenance. Use your existing HTTP Request / Run Workflow nodes to dispatch a worker; no extra training node is needed.
 
 ## Validation
 

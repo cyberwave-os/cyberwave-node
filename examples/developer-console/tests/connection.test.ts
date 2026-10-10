@@ -146,3 +146,18 @@ test('workflow writes require a local authenticated session and origin; errors r
   assert.equal(calls.length,4);
  });
 });
+
+test('human responses and dataset reviews keep local write restrictions and scope media to returned samples', async () => {
+  const calls = [];
+  await run(async (url, options) => {calls.push({url:String(url),options});return Response.json({items:[{source_sha256:'a'.repeat(64),file_url:'https://storage.example.com/review.png'}]});}, async request => {
+    await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com',token:'remote-token'});
+    assert.equal((await request('/gateway/rest/api/v1/workflow-actions/action/respond','POST',{decision:'approved'})).status,405);
+    await request('/gateway/connection','POST',{baseUrl:'http://localhost:8000'});
+    assert.equal((await request('/gateway/rest/api/v1/workflow-actions/action/respond','POST',{decision:'approved'})).status,200);
+    assert.equal((await request('/gateway/rest/api/v1/datasets/d/samples/s/review','POST',{status:'approved',revision:1,annotations:[]})).status,200);
+    assert.equal((await request('/gateway/rest/api/v1/datasets/d/samples')).status,200);
+    assert.equal((await request('/gateway/media?url='+encodeURIComponent('https://storage.example.com/review.png'))).status,200);
+    assert.equal(calls.at(-1).options.headers?.Authorization,undefined);
+    assert.equal((await request('/gateway/media?url='+encodeURIComponent('https://storage.example.com/unrelated.png'))).status,403);
+  });
+});

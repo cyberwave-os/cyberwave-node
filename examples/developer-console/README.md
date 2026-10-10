@@ -159,3 +159,7 @@ Example 13 also contains **Verify evidence stored in Cyberwave**. Choose an envi
 
 
 For application-owned server integrations, see the [typed governance and evidence recipes](../recipes/README.md). They reuse existing workspace metrics, organization credits, Episodes and Datasets. They do not add routes to this example gateway or claim arbitrary image-label training support.
+
+### Human actions and dataset evidence (preview backend)
+
+Open [Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) from the header dropdown. Connect to the matching local backend as the assigned person. The example lists actions, submits explicit consent/acknowledgement, and displays a media collection by UUID. The platform inbox handles photo upload; Dataset → Samples handles labels. See [human-action recipes](../recipes/human-actions.ts), [evidence recipes](../recipes/evidence.ts), and [reviewed YOLO training export](../training/README.md). Remote reads remain available; this demonstration gateway limits mutations to authenticated local APIs.

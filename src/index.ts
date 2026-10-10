@@ -3,6 +3,10 @@ import type { paths as ProductionPaths, components } from './generated/schema.js
 import type { paths as ExtensionPaths, components as ExtensionComponents } from './generated/extensions.js';
 export type { components } from './generated/schema.js';
 export type paths = Omit<ProductionPaths, keyof ExtensionPaths> & ExtensionPaths;
+export type HumanAction = ExtensionComponents['schemas']['HumanActionSchema'];
+export type HumanActionResponse = ExtensionComponents['schemas']['HumanActionResponse'];
+export type DatasetSample = ExtensionComponents['schemas']['DatasetSampleSchema'];
+export type SampleAnnotation = ExtensionComponents['schemas']['SampleAnnotation'];
 export type WorkflowInputContract = ExtensionComponents['schemas']['WorkflowInputContractSchema'];
 export type Asset = components['schemas']['AssetSchema'];
 export type Environment = components['schemas']['EnvironmentSchema'];
