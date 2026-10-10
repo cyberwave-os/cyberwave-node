@@ -11,7 +11,7 @@ export function createRobotView(container: HTMLElement, _anchor: Anchor) {
   void (async () => {
     const client = connectedClient(await restoreConnection());
     const [asset] = await client.assets.list({ registry_id: 'unitree/go2', limit: 1 });
-    if (!asset) throw new Error('Unitree Go2 is not present in this catalog. Select another API in Asset studio.');
+    if (!asset) throw new Error('Unitree Go2 is not present in this catalog. Change the API in the header.');
     const detail = await client.assets.get(asset.uuid); if (disposed) return;
     object = { id: asset.uuid, name: asset.name, model: assetModel(detail, client.baseUrl), ...latest, scale: { x: 1, y: 1, z: 1 }, joints: {} };
     await viewer.setObjects([object]); if (!disposed) { viewer.updatePose(object.id, latest); viewer.fit(1.8); }

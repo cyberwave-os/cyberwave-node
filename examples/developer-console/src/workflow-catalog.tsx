@@ -6,13 +6,19 @@ export function WorkflowCatalog({
   client,
   environmentId,
   workspaceId,
+  onWorkflowSelected,
 }: {
   client: CyberwaveClient;
   environmentId?: string;
   workspaceId?: string;
+  onWorkflowSelected?: (workflow?: Workflow) => void;
 }) {
   const selection = useRef<AbortController | undefined>(undefined);
-  useEffect(() => () => selection.current?.abort(), []);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; selection.current?.abort(); };
+  }, []);
   const [rows, setRows] = useState<Workflow[]>([]),
     [selected, setSelected] = useState<Workflow>();
   const [templates, setTemplates] = useState<Workflow[]>([]),
@@ -70,11 +76,15 @@ export function WorkflowCatalog({
     selection.current = abort;
     setBusy(true);
     setSelected(undefined);
+    onWorkflowSelected?.(undefined);
     try {
       const workflow = await client.workflows.get(uuid, {
         signal: abort.signal,
       });
-      if (!abort.signal.aborted) setSelected(workflow);
+      if (!abort.signal.aborted) {
+        setSelected(workflow);
+        onWorkflowSelected?.(workflow);
+      }
     } catch (e) {
       if (!abort.signal.aborted) setStatus(workflowError(e));
     } finally {
@@ -193,6 +203,7 @@ export function WorkflowCatalog({
           workspaceId={workspaceId}
           onBusyChange={setBusy}
           onChange={(w) => {
+            if (!mounted.current) return;
             // A completed save must not replace a newer user selection.
             setSelected((current) => (current?.uuid === w.uuid ? w : current));
             setRows((old) => {
@@ -211,6 +222,9 @@ export function WorkflowCatalog({
             });
           }}
           onCreated={(w) => {
+            // A clone may finish after the caller has selected another scope.
+            if (!mounted.current) return;
+            onWorkflowSelected?.(w);
             setStatus("Draft created. Configure its inputs before activation.");
             setRows((old) => [w, ...old]);
             setSelected((current) =>

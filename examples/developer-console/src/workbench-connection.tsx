@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { DEFAULT_API_URL, type CyberwaveClient } from "cyberwave";
-import { ConnectionPanel, CyberwaveProvider } from "@cyberwave/react";
+import { type CyberwaveClient } from "cyberwave";
+import { CyberwaveProvider } from "@cyberwave/react";
 import {
-  connect,
   connectedClient,
-  disconnect,
   restoreConnection,
   type Connection,
 } from "./connection.ts";
@@ -34,26 +32,13 @@ export function ConnectedWorkbench({
   }, []);
   return (
     <>
-      <ConnectionPanel
-        baseUrl={connection?.baseUrl || DEFAULT_API_URL}
-        authenticated={connection?.authenticated}
-        onConnect={async (input) => {
-          setConnection(undefined);
-          setError("");
-          setConnection(await connect(input.baseUrl, input.token));
-        }}
-        onDisconnect={async () => {
-          setConnection(undefined);
-          await disconnect();
-        }}
-      />
       {error && (
         <p role="alert" className="cw-error">
           {error}
         </p>
       )}
       {client && (
-        <CyberwaveProvider client={client}>
+        <CyberwaveProvider key={connection?.connectionId} client={client}>
           {children(client)}
         </CyberwaveProvider>
       )}

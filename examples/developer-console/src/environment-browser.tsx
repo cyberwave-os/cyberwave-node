@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { assetModel, DEFAULT_API_URL, type Asset, type Environment, type SceneObject, type EnvironmentSnapshot } from 'cyberwave';
-import { CyberwaveProvider, ConnectionPanel, EnvironmentBrowser, AssetBrowser, EnvironmentSummary } from '@cyberwave/react';
+import { assetModel, type Asset, type Environment, type SceneObject, type EnvironmentSnapshot } from 'cyberwave';
+import { CyberwaveProvider, EnvironmentBrowser, AssetBrowser, EnvironmentSummary } from '@cyberwave/react';
 import { createEnvironmentViewer } from '@cyberwave/environment-3d';
-import { connect, connectedClient, disconnect, mediaUrl, restoreConnection, type Connection } from './connection.ts';
+import { connectedClient, mediaUrl, restoreConnection, type Connection } from './connection.ts';
 import '@cyberwave/react/styles.css';
 import './environment-browser.css';
 const catalog = location.pathname.includes('asset-catalog');
@@ -35,19 +35,14 @@ function App() {
     function tick(now: number) { const angle = (now - start) / 3500; viewer.current?.updatePose(object.id, { position: { x: Math.sin(angle) * .8, y: (1 - Math.cos(angle)) * .8, z: object.position.z }, rotation: { x: 0, y: 0, z: Math.sin(angle / 2), w: Math.cos(angle / 2) } }); frame = requestAnimationFrame(tick); }
     frame = requestAnimationFrame(tick); return () => { cancelAnimationFrame(frame); viewer.current?.updatePose(object.id, object); };
   }, [preview, objects]);
-  async function changeConnection(input: { baseUrl: string; token?: string }) {
-    // Invalidate scene and selections before changing the credential destination.
-    setSelected(undefined); setSnapshot(undefined); setObjects([]); setPreview(false); setConnection(undefined);
-    setConnection(await connect(input.baseUrl, input.token)); setError('');
-  }
   return <main className="studio">
     <section className="studio-heading"><div><span className="studio-kicker">CYBERWAVE / DEVELOPER SDK</span><h1>{catalog ? 'Real assets. Your experience.' : 'Your world. Your interface.'}</h1><p>{catalog ? 'Explore production catalog models and compose your own robot experience.' : 'Load a Cyberwave environment into an independent, embeddable 3D view.'}</p></div><a href={catalog ? '/environments.html' : '/asset-catalog.html'} className="studio-link">{catalog ? 'Browse environments' : 'Explore public assets'} ↗</a></section>
-    <ConnectionPanel baseUrl={connection?.baseUrl ?? DEFAULT_API_URL} authenticated={connection?.authenticated} onConnect={changeConnection} onDisconnect={async () => { setSelected(undefined); setSnapshot(undefined); setObjects([]); setPreview(false); setConnection(undefined); await disconnect(); setStatus('Disconnected. Connect to browse again.'); }} />
+
     <p className="studio-session">{connection ? `${connection.baseUrl} · ${connection.authenticated ? 'Token held in gateway memory for this session' : 'Anonymous catalog access'}` : 'Connect to start'} · Changing origin clears the scene and credentials. Environment access requires authentication.</p>
     {error && <p role="alert" className="cw-error">{error}</p>}
     <div className="studio-workspace"><aside className="studio-browser"><div className="studio-section-title"><h2>{catalog ? 'Asset catalog' : 'Environments'}</h2><span>{catalog ? 'URDF / GLB' : 'YOUR WORKSPACE'}</span></div>
-      {client && <CyberwaveProvider key={connection?.baseUrl + String(connection?.authenticated)} client={client}>{catalog ? <AssetBrowser onSelect={setSelected} selectedId={selected?.uuid} resolveResource={mediaUrl} /> : <EnvironmentBrowser onSelect={setSelected} selectedId={selected?.uuid} resolveResource={mediaUrl} />}</CyberwaveProvider>}
-      {!client && <p className="studio-muted">Choose an API origin and connect above.</p>}
+      {client && <CyberwaveProvider key={connection?.connectionId} client={client}>{catalog ? <AssetBrowser onSelect={setSelected} selectedId={selected?.uuid} resolveResource={mediaUrl} /> : <EnvironmentBrowser onSelect={setSelected} selectedId={selected?.uuid} resolveResource={mediaUrl} />}</CyberwaveProvider>}
+      {!client && <p className="studio-muted">Choose an API origin in the header.</p>}
     </aside><section className="studio-viewport"><div className="studio-viewport-toolbar"><span><i /> {preview ? 'KINEMATIC PREVIEW' : '3D VIEW'} <small>{selected?.name || 'No selection'}</small></span><button className="cw-button" onClick={() => viewer.current?.fit()}>Fit scene</button></div><div className="studio-canvas" ref={container} />
       {!selected && <div className="studio-empty"><span>↖</span><h2>{catalog ? 'Pick a real robot' : 'Open an environment'}</h2><p>{catalog ? 'URDF meshes, materials and joints come from the Cyberwave catalog.' : 'Your twins and asset models appear here in their stored poses.'}</p></div>}
       <div className="studio-viewport-footer"><span role="status">{status}</span><span>Orbit · drag &nbsp; / &nbsp; Zoom · scroll &nbsp; / &nbsp; Select · double-click</span></div>

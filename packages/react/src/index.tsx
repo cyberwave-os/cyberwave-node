@@ -20,8 +20,8 @@ export function useEnvironment(uuid: string): Resource<EnvironmentSnapshot> {
   return useResource(useMemo(() => (signal: AbortSignal) => client.loadEnvironment(uuid, { signal }), [client, uuid]));
 }
 export type ConnectionInput = { baseUrl: string; token?: string };
-export function ConnectionPanel({ baseUrl = DEFAULT_API_URL, authenticated = false, onConnect, onDisconnect }: {
-  baseUrl?: string; authenticated?: boolean; onConnect: (input: ConnectionInput) => Promise<void>; onDisconnect?: () => Promise<void>;
+export function ConnectionPanel({ baseUrl = DEFAULT_API_URL, authenticated = false, onConnect, onDisconnect, disconnectLabel = 'Disconnect' }: {
+  baseUrl?: string; authenticated?: boolean; onConnect: (input: ConnectionInput) => Promise<void>; onDisconnect?: () => Promise<void>; disconnectLabel?: string;
 }) {
   const [url, setUrl] = useState(baseUrl), [token, setToken] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
   useEffect(() => { setUrl(baseUrl); setToken(''); }, [baseUrl]);
@@ -35,7 +35,7 @@ export function ConnectionPanel({ baseUrl = DEFAULT_API_URL, authenticated = fal
     <datalist id="cw-api-origins"><option value={DEFAULT_API_URL} /><option value="http://localhost:8000" /></datalist>
     <label>API token <small>optional for public assets</small><input aria-label="API token" type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} placeholder="Paste a token for this origin" /></label>
     <button className="cw-button cw-primary" disabled={busy}>{busy ? 'Connecting…' : 'Connect'}</button>
-    {onDisconnect && <button type="button" className="cw-button" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await onDisconnect(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}>Disconnect</button>}
+    {onDisconnect && <button type="button" className="cw-button" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await onDisconnect(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}>{disconnectLabel}</button>}
     {error && <p role="alert" className="cw-error">{error}</p>}
   </form>;
 }

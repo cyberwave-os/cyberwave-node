@@ -1,6 +1,6 @@
 # Cyberwave developer console
 
-Seven examples share the official `cyberwave` client, optional React/3D packages and a Cyberwave-style header. Start them from the [SDK repository root](../../README.md), after `pnpm build`, with `pnpm server` and `pnpm dev`.
+Thirteen examples share the official `cyberwave` client, optional React/3D packages and a Cyberwave-style header. Start them from the [SDK repository root](../../README.md), after `pnpm build`, with `pnpm server` and `pnpm dev`.
 
 | Type | Example | Integration |
 | --- | --- | --- |
@@ -11,12 +11,20 @@ Seven examples share the official `cyberwave` client, optional React/3D packages
 | Simulation | [05 · Mission timeline](http://127.0.0.1:5173/mission-simulation.html) | Deterministic play/pause/seek/reset without changing observed data. |
 | Simulation | [06 · Robot runtime modes](http://127.0.0.1:5173/robot-environment.html) | Actual Go2 model, controller preview / local observation switching, optional MuJoCo lifecycle. |
 | Command & control | [07 · Keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html) | Space + WASD/QE to bounded velocity intent, with session ownership and expiry. |
+| Inspection & GIS | [08 · Aerial inspection](http://127.0.0.1:5173/aerial-inspection.html) | Survey objectives, aircraft constraints and Cesium preview. |
+| Inspection & GIS | [09 · Campaign review](http://127.0.0.1:5173/inspection-workbench.html) | Evidence, review revisions and stored campaigns. |
+| Inspection & GIS | [10 · Recording review](http://127.0.0.1:5173/recording-review.html) | Recording catalog, readiness and finalized playback. |
+| Planning & governance | [11 · Workflows & schedules](http://127.0.0.1:5173/mission-library.html) | Templates, configured targets, recurring timing and real run history. |
+| Maintenance | [12 · Maintenance planning](http://127.0.0.1:5173/maintenance-planning.html) | Preventive/corrective proposals, window checks, saved findings and workflow links. |
+| Maintenance | [13 · Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) | Duplicate updates, verification evidence and delivery coverage. |
 
 ## Production, local and custom connections
 
-The explorer and asset studio default to `https://api.cyberwave.com`. Connect anonymously for public assets; enter a Cyberwave API token for private environments. Use `http://localhost:8000` or any custom HTTPS API origin for integration testing. Changing origins clears the scene and requires a new credential choice. Tokens stay in the local gateway's memory; model requests never forward them. `Disconnect` revokes the session.
+Open **API** in the header to select production, localhost or a custom origin. The same `ConnectionPanel` serves all thirteen examples; page-level duplicates have been removed. Changing connection reloads the example and clears drafts, selections, models and previews. Export drafts first. Navigation between examples restores the gateway session. **Reset to public** replaces it with an anonymous production session. The page and header share one initialization request so a first visit cannot race two cookie sessions.
 
-If a server-side `CYBERWAVE_API_TOKEN` is configured for the local gateway's exact origin, the explorer can use it when you explicitly connect to that local origin. It is never used for production or another custom origin. The source of the current connection is shown above the scene.
+The shared API header on every example defaults to `https://api.cyberwave.com`. Connect anonymously for public assets; enter a Cyberwave API token for private environments. Use `http://localhost:8000` or any custom HTTPS API origin for integration testing. Changing origins clears the scene and requires a new credential choice. Tokens stay in the local gateway's memory; model requests never forward them.
+
+If a server-side `CYBERWAVE_API_TOKEN` is configured for the local gateway's exact origin, the explorer can use it when you explicitly connect to that local origin. It is never used for production or another custom origin. The current API origin and authentication state are shown in the header.
 
 The connection panel configures **browsing, local inspection metadata writes and workflow configuration/execution**. Remote origins remain read-only in this example gateway. Control examples retain their separately configured local environment, target and policy. Selecting production in the explorer never retargets command delivery. A static frontend alone is insufficient: `/gateway` and `/api` need the example BFF. This loopback-only server is a development tool, not a publicly deployable multi-user proxy.
 
@@ -129,8 +137,15 @@ The form reuses `metadata.editable_fields` and existing literal input mappings. 
 
 ### Connection and edit consistency
 
-The development gateway holds credentials in an HttpOnly session cookie. Each restored connection also has a non-secret revision ID. If another tab reconnects, an existing client fails with a connection-change error instead of silently using the replacement origin/account; reconnect or reload that example. This is example-gateway behavior, not a new platform authentication scheme.
+The development gateway holds credentials in memory, addressed by an HttpOnly session cookie. Each restored connection also has a non-secret revision ID. If another tab reconnects, an existing client fails with a connection-change error instead of silently using the replacement origin/account; reconnect or reload that example. This is example-gateway behavior, not a new platform authentication scheme.
 
 Workflow form validation finishes before the first write. Only changed static inputs are patched, preserving dynamic bindings and unchanged schedule nodes. Timing changes are explicit and keep the existing backend conflict guard. Multi-node saves still use separate API operations: reload an inactive draft after a partial failure before retrying. The workflow catalog is locked while its operation is pending.
 
 Controller examples retain their own lease ID in tab-scoped session storage so an interrupted reload can recover on the next explicit activation. The ID does not authorize closing another tab’s session. Motion still expires independently at the reference consumer.
+
+
+## Maintenance scenarios
+
+Read the [maintenance integration guide](MAINTENANCE.md). Example 12 reads real branch inspection campaigns and selects only observed findings whose latest review is validated. It retains exact source/review references, supports preventive work without a defect, and reuses `WorkflowCatalog` for template selection, configuration, scheduling and monitoring. Proposals and sample crew reservations are local; exporting is not submission or dispatch.
+
+Example 13 demonstrates a synthetic external work-order inbox: duplicate updates are harmless, stale/conflicting updates require reconciliation, and later source revisions may reopen work. Verification and delivery acceptance are separate. A reviewed finding can resolve while incomplete campaign coverage still requires rework; a complete report can accurately record a persistent defect. It uses the same workflow planner for a verification visit, without inferring business acceptance from run success.

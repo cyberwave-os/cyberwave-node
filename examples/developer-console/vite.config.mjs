@@ -3,6 +3,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   build: { rolldownOptions: { input: {
+    maintenance: 'maintenance-planning.html', verification: 'maintenance-verification.html',
     library: 'mission-library.html',
     aerial: 'aerial-inspection.html', inspection: 'inspection-workbench.html', recordings: 'recording-review.html',
     environments: 'environments.html', catalog: 'asset-catalog.html', cesium: 'index.html', mission: 'mission-simulation.html', keyboard: 'keyboard-telecontrol.html', monitor: 'twin-monitor.html', robot: 'robot-environment.html',

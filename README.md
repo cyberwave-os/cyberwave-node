@@ -70,13 +70,13 @@ pnpm server
 pnpm dev
 ```
 
-Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **eleven examples**, including [Cesium GIS planning](http://127.0.0.1:5173/), [mission simulation](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), and [camera monitoring](http://127.0.0.1:5173/twin-monitor.html).
+Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **thirteen examples**, including [Cesium GIS planning](http://127.0.0.1:5173/), [mission simulation](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), and [camera monitoring](http://127.0.0.1:5173/twin-monitor.html).
 
 New workbenches: [aerial inspection planning](http://127.0.0.1:5173/aerial-inspection.html), [campaign and evidence review](http://127.0.0.1:5173/inspection-workbench.html), and [recording catalog/playback](http://127.0.0.1:5173/recording-review.html).
 
 See the [example guide](examples/developer-console/README.md) for local backend, broker, and physics-worker configuration. The examples run from this repository without the private Cyberwave application.
 
-The explorer defaults to **https://api.cyberwave.com**. Public catalog assets work anonymously. Enter a token to access authorized environments, or enter a custom HTTPS/localhost API origin. The development gateway handles API CORS, holds the token in memory for one hour and uses an HttpOnly SameSite session cookie. Reconnecting invalidates the previous session; disconnect removes it. Tokens are never written to browser storage or sent to model storage URLs. A production application should provide its own authenticated BFF and session lifecycle.
+The explorer defaults to **https://api.cyberwave.com**. Public catalog assets work anonymously. Enter a token to access authorized environments, or enter a custom HTTPS/localhost API origin. The development gateway handles API CORS, holds the token in memory for one hour and uses an HttpOnly SameSite session cookie. Use the shared **API** header on every example to connect. Switching reloads the page and clears local drafts, selections and models; export drafts first. **Reset to public** drops the previous credentials and returns to anonymous production access. Tokens are never written to browser storage or sent to model storage URLs. A production application should provide its own authenticated BFF and session lifecycle.
 
 ## Use the client
 
@@ -169,3 +169,10 @@ const executions = await client.missions.executions(twinId, missionId);
 Mission writes remain available through `client.rest` using generated contracts. The examples' general connection permits reads only. A saved task sequence, a scheduled execution, and a validated aircraft flight plan are separate concepts. Application services own preparation, approvals, idempotency, resource allocation and command execution.
 
 The aerial workbench is a synthetic draft and kinematic cursor, not an autopilot or physics simulator. It distinguishes multirotor, runway/catapult fixed-wing and hybrid VTOL requirements. Coverage geometry assumes flat ground; non-AGL input is blocked pending terrain/datum conversion. It exposes runway length, turn-radius and reserve checks without declaring a route flight-ready. The inspection workbench keeps persistent defect identity separate from campaign observations, technical condition, review and maintenance priority; its local review/export data model is illustrative and is not an implemented backend API.
+
+
+## Maintenance planning and verification
+
+[Maintenance planning](http://127.0.0.1:5173/maintenance-planning.html) combines preventive/corrective proposals, work-window and sample crew-conflict checks, real saved inspection reviews, and the existing workflow planner. Its export retains API origin, immutable observation/review references and an optional workflow link. [Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) exercises replay-safe work-order updates, expert verification, and partial delivery coverage using synthetic browser data.
+
+These are application examples, not new SDK or backend maintenance models. Cyberwave remains responsible for workflows/runs and inspection evidence; the application and its maintenance system own proposals, work orders and acceptance. Work-order completion alone never resolves a defect. See the [maintenance integration guide](examples/developer-console/MAINTENANCE.md) for scenarios, data ownership and missing backend contracts.
