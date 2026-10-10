@@ -1,26 +1,54 @@
 {
   "name": "cyberwave",
-  "version": "0.0.1",
-  "description": "The official Node CyberWave SDK",
-  "main": "index.ts",  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=24"
   },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "build": "pnpm build:sdk && pnpm --filter @cyberwave/environment-3d build && pnpm --filter @cyberwave/react build && pnpm --filter cyberwave-developer-console build",
+    "test": "node --test tests/*.test.ts && pnpm --filter cyberwave-developer-console test",
+    "dev": "pnpm --filter cyberwave-developer-console dev",
+    "server": "pnpm --filter cyberwave-developer-console server",
+    "build:sdk": "tsc -p tsconfig.json",
+    "pack:check": "node scripts/check-packages.mjs"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "@types/node": "^24.0.0"
+  },
+  "description": "Typed Cyberwave client and framework-independent environment loading",
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./generated": {
+      "types": "./dist/generated/schema.d.ts",
+      "import": "./dist/generated/schema.js"
+    }
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cyberwave-os/cyberwave-node.git"
+    "url": "https://github.com/cyberwave-os/cyberwave-node.git"
   },
-  "author": "Vittorio ErLapso Banfi",
-  "license": "Apache-2.0",
+  "homepage": "https://github.com/cyberwave-os/cyberwave-node#readme",
   "bugs": {
     "url": "https://github.com/cyberwave-os/cyberwave-node/issues"
   },
-  "homepage": "https://github.com/cyberwave-os/cyberwave-node#readme",
-  "devDependencies": {
-    "typescript": "^5.3.3",
-    "ts-node": "^10.9.2",
-    "@types/node": "^20.11.0"
-  }
+  "author": "Cyberwave S.p.a."
 }

@@ -1,0 +1,42 @@
+{
+  "name": "@cyberwave/react",
+  "version": "0.1.0",
+  "description": "React components and hooks for Cyberwave environments",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cyberwave-os/cyberwave-node.git",
+    "directory": "packages/react"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp src/styles.css dist/styles.css"
+  },
+  "dependencies": {
+    "cyberwave": "workspace:^"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "19.2.0"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ]
+}

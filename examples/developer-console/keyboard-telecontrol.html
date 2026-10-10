@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Cyberwave keyboard controller</title></head><body><main>
+<h1>Keyboard → Cyberwave controller input</h1><p class="muted">Custom keyboard UI → bounded velocity intent → controller transport → separate simulated preview. Simulation only; no live control mode.</p>
+<div class="columns"><section class="card"><svg id="plot" viewBox="0 0 600 390" role="img" aria-label="Kinematic controller preview"></svg><p class="preview">Orange is the reference consumer's kinematic pose, not MuJoCo or measured robot telemetry.</p><p id="pose"></p><p id="received"></p></section>
+<section class="card"><p id="context">Reading controller context…</p><button id="open">Open input session</button><button id="close" disabled>Close session</button>
+<div id="pad" tabindex="0" aria-label="Keyboard input pad">Focus here. Hold Space as the enable key, then W/S forward/back, A/D strafe, Q/E turn. Release Space or leave this pad to stop.</div>
+<p id="keys">No keys held.</p><button id="pulse" disabled>Forward pulse (250 ms)</button><button id="stop" disabled>Stop input</button><p class="muted">The pulse uses the same input adapter and is a keyboard-accessible alternative.</p>
+<h2>Controller input envelope</h2><pre id="packet">No controller input submitted.</pre><p id="status" role="status"></p></section></div>
+</main><script type="module" src="/src/keyboard-telecontrol.ts"></script><script type="module" src="/src/example-shell.ts"></script></body></html>
