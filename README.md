@@ -240,7 +240,7 @@ await client.datasets.reviewSample(datasetId, sampleId, {
 
 The [typed integration recipes](examples/recipes/README.md) compose existing generated REST APIs: workspace usage and organization credit reporting, recording-window selection as an Episode, and collection of existing Episodes into a Dataset. They add no new service facade or storage primitive. `pnpm recipes:check` checks these examples during the SDK build.
 
-Native Dataset creation currently requires compatible robot-and-camera Episodes. Arbitrary image/video attachments need a reviewed sample-manifest adapter before they can become image-training datasets. Recognizing COCO/CVAT/YOLO on import does not mean those formats support playback or fine-tuning. Credits are organization-scoped; workspace metrics do not enforce budgets or reserve resources.
+Robotics datasets built from Episodes require compatible robot-and-camera schemas. Reviewed image datasets use media collections and the sample-manifest export in the training recipe below. Appending a video does not automatically extract labeled frames. Recognizing COCO/CVAT/YOLO on import does not mean those formats support playback or built-in fine-tuning. Credits are organization-scoped; workspace metrics do not enforce budgets or reserve resources.
 
 Integration guides in the documentation: [workspace governance](https://docs.cyberwave.com/enterprise/workspace-governance) and [evidence, datasets and reviewed labels](https://docs.cyberwave.com/feature-reference/datasets/evidence-and-labels). These pages are authored alongside this development branch and become available when its documentation is deployed.
 
