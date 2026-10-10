@@ -253,3 +253,5 @@ The [training recipe](examples/training/README.md) exports approved images and l
 ### Capture and annotation (preview)
 
 [Example 15](http://127.0.0.1:5173/image-annotation.html) uses `@cyberwave/react/annotation`: Annotorious-backed rectangle/polygon editing, camera/video frame capture and canonical ML-result overlays. Task schemas and image coordinates come from the backend ML registry; provider parsing stays in its adapters. Reviewed polygons reuse Dataset samples, source hashes and revision checks, and the worker recipe can export YOLO segmentation labels. See the [component and integration guide](packages/react/ANNOTATION.md).
+
+Accepted asynchronous model jobs can be monitored through `client.mlmodels.waitForExecution(executionUuid, { signal, onProgress })`, using existing persisted backend executions. The annotation helper handles both immediate and queued results; the example exposes stop/resume without submitting twice. Stopping monitoring leaves the server job running. Keep the accepted execution ID with its original image/task to resume after a timeout or page reload. There is no new job service or automatic inference retry.

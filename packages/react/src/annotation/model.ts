@@ -6,6 +6,7 @@ import {
   type StructuredImageAction,
   type StructuredActionCatalog,
   type components,
+  type ModelExecutionOptions,
 } from "cyberwave";
 
 export type ImageModelResult = {
@@ -19,6 +20,10 @@ export type ImageMark = {
   bbox?: number[];
   point?: number[];
   mask?: string;
+};
+export type ImageModelRunOptions = Omit<ModelExecutionOptions, "signal"> & {
+  /** Persist this ID with the source image and selected task to resume monitoring. */
+  onQueued?: (executionUuid: string) => void;
 };
 const validator = new Ajv({ strict: false });
 
@@ -120,21 +125,16 @@ export async function loadImageModelTasks(
 }> {
   const [catalog, model] = await Promise.all([
     client.rest.GET("/api/v1/mlmodels/structured-actions", { signal }),
-    client.rest.GET("/api/v1/mlmodels/{uuid}", {
-      params: { path: { uuid: modelUuid } },
-      signal,
-    }),
+    client.mlmodels.get(modelUuid, { signal }),
   ]);
   if (!catalog.response.ok)
     throw new CyberwaveError(catalog.response.status, catalog.error);
-  if (!model.response.ok)
-    throw new CyberwaveError(model.response.status, model.error);
   const actions = (catalog.data as StructuredActionCatalog).actions.filter(
     (action) =>
       action.image_annotation &&
-      model.data!.allowed_structured_tasks?.includes(action.id),
+      model.allowed_structured_tasks?.includes(action.id),
   );
-  return { model: model.data!, actions };
+  return { model, actions };
 }
 
 export async function runImageModelTask(
@@ -144,6 +144,7 @@ export async function runImageModelTask(
   image: Blob,
   prompt = "",
   signal?: AbortSignal,
+  options: ImageModelRunOptions = {},
 ): Promise<ImageModelResult> {
   if (
     image.size > 20 * 1024 * 1024 ||
@@ -151,23 +152,59 @@ export async function runImageModelTask(
   )
     throw new Error("Use a JPEG, PNG or WebP image up to 20 MB.");
   const imageBase64 = await new Promise<string>((resolve, reject) => {
+    signal?.throwIfAborted();
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1]);
-    reader.onerror = () => reject(new Error("Could not read the image."));
+    const abort = () => {
+      reader.abort();
+      reject(signal!.reason);
+    };
+    const cleanup = () => signal?.removeEventListener("abort", abort);
+    reader.onload = () => {
+      cleanup();
+      resolve(String(reader.result).split(",")[1]);
+    };
+    reader.onerror = () => {
+      cleanup();
+      reject(new Error("Could not read the image."));
+    };
+    signal?.addEventListener("abort", abort, { once: true });
     reader.readAsDataURL(image);
   });
-  const response = await client.rest.POST("/api/v1/mlmodels/{uuid}/run", {
-    params: { path: { uuid: modelUuid } },
-    body: { structured_task: action.id, image_base64: imageBase64, prompt },
-    signal,
-  });
-  if (!response.response.ok)
-    throw new CyberwaveError(response.response.status, response.error);
-  if (response.data!.status === "queued")
-    throw new Error(
-      `Model job queued (${(response.data as { execution_uuid?: string }).execution_uuid || "see execution history"}). Poll its execution before importing annotations; do not submit again.`,
-    );
-  const result = response.data as ImageModelResult;
+  signal?.throwIfAborted();
+  const response = await client.mlmodels.run(
+    modelUuid,
+    { structured_task: action.id, image_base64: imageBase64, prompt },
+    { signal },
+  );
+  if (response.status === "queued") {
+    const uuid = response.execution_uuid;
+    if (!uuid)
+      throw new Error(
+        "The server queued work without an execution ID. Check model history before submitting again.",
+      );
+    options.onQueued?.(uuid);
+    return waitForImageModelTask(client, uuid, action, { ...options, signal });
+  }
+  const result = response as ImageModelResult;
   imageMarks(action, result); // Fail closed before any result is presented as geometry.
+  return result;
+}
+
+/** Resume the accepted execution for this image/task; no second inference request. */
+export async function waitForImageModelTask(
+  client: CyberwaveClient,
+  executionUuid: string,
+  action: StructuredImageAction,
+  options: ModelExecutionOptions = {},
+): Promise<ImageModelResult> {
+  const execution = await client.mlmodels.waitForExecution(executionUuid, options);
+  if (execution.status === "failed")
+    throw new Error(execution.error_message || "Model execution failed.");
+  if (execution.request_payload.structured_task !== action.id)
+    throw new Error("The execution belongs to a different image task.");
+  if (!execution.result)
+    throw new Error("Completed execution has no model result.");
+  const result = execution.result as ImageModelResult;
+  imageMarks(action, result);
   return result;
 }

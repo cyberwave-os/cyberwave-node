@@ -6,6 +6,8 @@ import {
   imageMarks,
   modelBoxProposals,
   loadImageModelTasks,
+  runImageModelTask,
+  waitForImageModelTask,
 } from "../packages/react/dist/annotation/model.js";
 import {
   fromImageAnnotations,
@@ -25,6 +27,58 @@ const boxes = {
   structured_task: "detect_boxes",
   output: [{ label: "part", box_2d: [100, 200, 800, 900] }],
 };
+test("queued image tasks monitor canonical execution results without following poll_url or posting twice", async (t) => {
+  const original = globalThis.FileReader;
+  t.after(() => { globalThis.FileReader = original; });
+  globalThis.FileReader = class {
+    result = "data:image/png;base64,aW1hZ2U=";
+    onload?: () => void;
+    readAsDataURL() { this.onload?.(); }
+    abort() {}
+  } as unknown as typeof FileReader;
+  const calls: string[] = [], queued: string[] = [];
+  const client = createCyberwave({ fetch: async request => {
+    calls.push(request.method);
+    if (request.method === "POST") {
+      assert.equal((await request.json()).structured_task, "detect_boxes");
+      return Response.json({ status: "queued", execution_uuid: "image-job", poll_url: "https://foreign.example/secret" }, { status: 202 });
+    }
+    assert.equal(new URL(request.url).pathname, "/api/v1/mlmodels/executions/image-job");
+    return Response.json({ uuid: "image-job", status: "completed", request_payload: { structured_task: "detect_boxes" }, result: boxes });
+  }});
+  assert.deepEqual(await runImageModelTask(client, "model", actions.detect_boxes, new Blob(["image"], { type: "image/png" }), "", undefined, { onQueued: id => queued.push(id) }), boxes);
+  assert.deepEqual(queued, ["image-job"]);
+  assert.deepEqual(calls, ["POST", "GET"]);
+  const immediate = createCyberwave({ fetch: async request => {
+    assert.equal(request.method, "POST");
+    return Response.json(boxes);
+  }});
+  assert.deepEqual(await runImageModelTask(immediate, "model", actions.detect_boxes, new Blob(["image"], { type: "image/png" })), boxes);
+  const missingId = createCyberwave({ fetch: async request => {
+    assert.equal(request.method, "POST");
+    return Response.json({ status: "queued", poll_url: "https://foreign.example/secret" }, { status: 202 });
+  }});
+  await assert.rejects(runImageModelTask(missingId, "model", actions.detect_boxes, new Blob(["image"], { type: "image/png" })), /without an execution ID/);
+});
+
+test("resumed image jobs reject failed, missing, mismatched and non-canonical results", async () => {
+  const base = { uuid: "image-job", status: "completed", request_payload: { structured_task: "detect_boxes" }, result: boxes };
+  for (const row of [
+    { ...base, status: "failed", error_message: "Provider unavailable" },
+    { ...base, result: null },
+    { ...base, request_payload: { structured_task: "segment" } },
+    { ...base, result: { ...boxes, output: "provider text" } },
+    { ...base, result: { ...boxes, output: [{ box_2d: [-1, 0, 100, 100] }] } },
+  ]) {
+    const client = createCyberwave({ fetch: async request => { assert.equal(request.method, "GET"); return Response.json(row); } });
+    await assert.rejects(waitForImageModelTask(client, "image-job", actions.detect_boxes), /Provider|no model result|different image task|schema|coordinates/);
+  }
+});
+
+test("aborted image submission does not read pixels or submit a model request", async () => {
+  const client = createCyberwave({ fetch: async () => { assert.fail("Must not submit"); } });
+  await assert.rejects(runImageModelTask(client, "model", actions.detect_boxes, new Blob(["image"], { type: "image/png" }), "", AbortSignal.abort()), { name: "AbortError" });
+});
 test("canonical YX coordinates become normalized XY proposals using catalog scale", () => {
   assert.deepEqual(modelBoxProposals(actions.detect_boxes, boxes), [
     { label: "part", bbox: [0.2, 0.1, 0.9, 0.8] },

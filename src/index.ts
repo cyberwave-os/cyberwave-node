@@ -1,4 +1,6 @@
 import createClient from 'openapi-fetch';
+import { waitForModelExecution, type ModelExecutionOptions } from './mlmodels.js';
+export type { MLModelExecution, ModelExecutionOptions } from './mlmodels.js';
 import type { paths as ProductionPaths, components } from './generated/schema.js';
 import type { paths as ExtensionPaths, components as ExtensionComponents } from './generated/extensions.js';
 export type { components } from './generated/schema.js';
@@ -102,6 +104,14 @@ export function createCyberwave(options: ClientOptions = {}) {
       data(rest.GET('/api/v1/assets', { params: { query }, ...opts })),
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/assets/{uuid}', { params: { path: { uuid } }, ...opts })),
   };
+  const modelExecution = (execution_uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/mlmodels/executions/{execution_uuid}', { params: { path: { execution_uuid } }, ...opts }));
+  /** Existing model runs and durable execution records; submission is never retried. */
+  const mlmodels = {
+    get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/mlmodels/{uuid}', { params: { path: { uuid } }, ...opts })),
+    run: (uuid: string, body: components['schemas']['MLModelRunSchema'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/mlmodels/{uuid}/run', { params: { path: { uuid } }, body, ...opts })),
+    execution: modelExecution,
+    waitForExecution: (uuid: string, opts: ModelExecutionOptions = {}) => waitForModelExecution(modelExecution, uuid, opts),
+  };
   const missions = {
     forWorkspace: (workspace_uuid: string, query: {environment_uuid?:string;twin_uuid?:string;limit?:number;offset?:number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workspaces/{workspace_uuid}/missions', {params:{path:{workspace_uuid},query},...opts})),
     list: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{uuid}/missions', { params: { path: { uuid } }, ...opts })),
@@ -188,7 +198,7 @@ export function createCyberwave(options: ClientOptions = {}) {
     }
     return { environment, twins, objects, warnings };
   }
-  return { baseUrl, rest, environments, assets, missions, workflows, recordings, inspections, datasets, humanActions, loadEnvironment };
+  return { baseUrl, rest, environments, assets, missions, workflows, recordings, inspections, datasets, humanActions, mlmodels, loadEnvironment };
 }
 export type CyberwaveClient = ReturnType<typeof createCyberwave>;
 

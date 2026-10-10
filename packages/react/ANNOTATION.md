@@ -48,7 +48,26 @@ const proposals = modelBoxProposals(selected, result);
 
 The generated client reads `GET /mlmodels/structured-actions` and intersects its actions with the model's `allowed_structured_tasks`. The canonical registry now advertises optional `image_annotation` metadata (version, kind, coordinate order and scale). Provider normalization stays in Cyberwave's existing backend task adapters. The UI validates canonical output against the returned JSON Schema with Ajv, then renders points, boxes, masks or image trajectories. Unknown contracts, provider text and out-of-range geometry fail visibly. Image trajectories are pixels, not robot commands.
 
-Use the authenticated public model `run` API. A model call can consume credits; no inference starts automatically. Adjust `createCyberwave({ timeoutMs })` to your application's inference budget. Queued jobs return an actionable execution ID in the error; this first helper does not poll them or automatically resubmit requests. The sample gateway allows model runs only against an authenticated local API, permits bounded image payloads, and keeps remote connections read-only.
+Use the authenticated public model `run` API. A model call can consume credits; no inference starts automatically. Adjust `createCyberwave({ timeoutMs })` to your application's per-request inference budget. If the server accepts asynchronous work, `runImageModelTask` monitors the existing execution endpoint until completion and validates its canonical result. Submission is never retried, and server-provided `poll_url` values are not followed. The sample gateway allows model runs only against an authenticated local API, permits bounded image payloads, and keeps remote connections read-only.
+
+```ts
+import { waitForImageModelTask } from '@cyberwave/react/annotation';
+const controller = new AbortController();
+const result = await runImageModelTask(client, modelUuid, selected, imageBlob,
+  prompt, controller.signal, {
+    timeoutMs: 300_000, // Total monitoring budget; each API read also has the client timeout.
+    pollIntervalMs: 1500,
+    onQueued: executionUuid => savePendingJob({ executionUuid, sourceId, taskId: selected.id }),
+    onProgress: execution => showStatus(execution.status),
+  });
+// On stop/unmount: controller.abort(). The server job continues.
+// Resume the same accepted job with its original source image and catalog task:
+const resumed = await waitForImageModelTask(client, savedJob.executionUuid, selected);
+```
+
+`client.mlmodels.run`, `.execution` and `.waitForExecution` provide the same transport and monitoring for non-React consumers and non-image models. Monitoring defaults to five minutes, reads sequentially, returns completed/failed records, and surfaces HTTP errors without retrying. The image helper turns failed executions and invalid geometry into errors. Missing execution IDs, unsupported statuses, absent results and incompatible tasks remain visible failures. A timeout or lost submission response does not prove the server stopped; reconcile with model history before starting again. Custom hosted models still need a backend adapter that produces the advertised image contract; polling does not convert arbitrary port payloads into geometry.
+
+Example 15 shows the execution ID, status, **Stop monitoring** and **Resume monitoring**. Its resume handle lasts while that page, API connection, source image and selected task remain selected. Applications that need reload recovery should persist the accepted ID with the original source identity and task, then restore all three together. Results remain proposals until explicitly reviewed.
 
 Segmentation output remains a canonical PNG mask within its box. It can be displayed or exported as a model result, but is **not** silently converted into box or polygon labels. Draw and review a polygon for the current dataset segmentation path. Automatic contour extraction and point-prompt segmentation need a separately reviewed adapter contract; do not add browser provider parsers to simulate support. [Annotorious's SAM plugin](https://github.com/annotorious/plugin-segment-anything) is a possible future renderer integration, but loading a separate browser model would bypass the platform's current model selection, credentials and execution accounting.
 

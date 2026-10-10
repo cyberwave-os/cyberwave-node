@@ -10,6 +10,8 @@ export {
   modelBoxProposals,
   loadImageModelTasks,
   runImageModelTask,
+  waitForImageModelTask,
+  type ImageModelRunOptions,
   type ImageModelResult,
   type ImageMark,
 } from "./model.js";
