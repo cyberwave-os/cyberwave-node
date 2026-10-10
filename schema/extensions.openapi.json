@@ -126,6 +126,22 @@
           },
           {
             "in": "query",
+            "name": "is_template",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Template"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
             "name": "limit",
             "schema": {
               "anyOf": [
@@ -1852,7 +1868,6 @@
             "type": "string"
           },
           "node_updated_at": {
-            "format": "date-time",
             "title": "Node Updated At",
             "type": "string"
           },

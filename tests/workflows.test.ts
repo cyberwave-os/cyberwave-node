@@ -146,7 +146,7 @@ test("pagination and contract requests keep generated transport options", async 
   });
   const controller = new AbortController();
   await sdk.workflows.list(
-    { workspace_uuid: "workspace", limit: 20, offset: 40 },
+    { workspace_uuid: "workspace", is_template: false, limit: 20, offset: 40 },
     { signal: controller.signal },
   );
   await sdk.workflows.executions("workflow", {
@@ -156,6 +156,10 @@ test("pagination and contract requests keep generated transport options", async 
   });
   await sdk.workflows.inputContract("workflow", { signal: controller.signal });
   assert.equal(new URL(requests[0].url).searchParams.get("offset"), "40");
+  assert.equal(
+    new URL(requests[0].url).searchParams.get("is_template"),
+    "false",
+  );
   assert.equal(new URL(requests[1].url).searchParams.get("limit"), "10");
   assert.equal(
     new URL(requests[2].url).pathname,
@@ -164,7 +168,7 @@ test("pagination and contract requests keep generated transport options", async 
 });
 
 test("backend union types and optional nulls are accepted without flattening bindings", () => {
-  const workflow = { metadata: {}, nodes: [node] };
+  const workflow = { metadata: {}, nodes: [{ ...node, metadata: {} }] };
   const fields = [
     {
       nodeId: node.uuid,
@@ -199,4 +203,112 @@ test("backend union types and optional nulls are accepted without flattening bin
       ),
     /type object/,
   );
+});
+
+test("a typed form cannot apply definitions from a different graph revision", () => {
+  const fields = workflowEditableFields({
+    metadata: { editable_fields: ["twin_uuid"] },
+    nodes: [node],
+  });
+  fields[0].nodeUpdatedAt = "revision-0";
+  assert.throws(
+    () => workflowNodePatch(node, fields, { twin_uuid: "new" }),
+    /definitions changed/,
+  );
+  fields[0].nodeUpdatedAt = node.updated_at;
+  assert.equal(
+    workflowNodePatch(node, fields, { twin_uuid: "new" }).expected_updated_at,
+    node.updated_at,
+  );
+});
+
+test("a stale form cannot replace a new dynamic binding or create a removed input", () => {
+  const fields = workflowEditableFields({
+    metadata: { editable_fields: ["twin_uuid"] },
+    nodes: [node],
+  });
+  const rebound = {
+    ...node,
+    metadata: {
+      input_mappings: {
+        twin_uuid: {
+          mode: "reference",
+          source_node_uuid: "upstream",
+          source_output: "twin_uuid",
+        },
+      },
+    },
+  };
+  assert.throws(
+    () => workflowNodePatch(rebound, fields, { twin_uuid: "new" }),
+    /bindings changed/,
+  );
+  assert.throws(
+    () =>
+      workflowNodePatch({ ...node, metadata: {} }, fields, {
+        twin_uuid: "new",
+      }),
+    /bindings changed/,
+  );
+  assert.throws(
+    () =>
+      workflowNodePatch(node, [{ ...fields[0], source: "parameter" }], {
+        twin_uuid: "new",
+      }),
+    /bindings changed/,
+  );
+});
+
+test("legacy value mappings use the same default mode as the backend runtime", () => {
+  const legacy = {
+    ...node,
+    metadata: { input_mappings: { twin_uuid: { value: "bound" } } },
+  };
+  const fields = workflowEditableFields({
+    metadata: { editable_fields: ["twin_uuid"] },
+    nodes: [legacy],
+  });
+  assert.equal(fields[0].source, "mapping");
+  assert.equal(
+    workflowNodePatch(legacy, fields, { twin_uuid: "new" }).metadata
+      .input_mappings.twin_uuid.value,
+    "new",
+  );
+});
+
+test("an optional enum permits null like the backend contract", () => {
+  const workflow = { metadata: {}, nodes: [{ ...node, metadata: {} }] };
+  const fields = [
+    {
+      nodeId: node.uuid,
+      nodeName: node.name,
+      name: "speed",
+      source: "parameter" as const,
+      value: 1,
+      type: "number",
+      required: false,
+      options: [{ value: "other", label: "Other" }],
+    },
+  ];
+  assert.equal(
+    workflowInputUpdates(workflow, { "step:speed": "null" }, fields)[0].patch
+      .parameters.speed,
+    null,
+  );
+});
+
+test("malformed mappings are not treated as editable literals", () => {
+  for (const binding of [null, [], "invalid"]) {
+    const broken = {
+      ...node,
+      metadata: { input_mappings: { twin_uuid: binding } },
+    };
+    assert.deepEqual(
+      workflowEditableFields({
+        metadata: { editable_fields: ["twin_uuid"] },
+        nodes: [broken],
+      }),
+      [],
+    );
+  }
 });

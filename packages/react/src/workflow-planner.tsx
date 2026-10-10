@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   workflowEditableFields,
   workflowNodePatch,
@@ -7,11 +7,11 @@ import {
   type Workflow,
   type Twin,
   type components,
-  type WorkflowInputContract,
   CyberwaveError,
 } from "cyberwave";
 import { WorkflowMonitor, workflowError } from "./workflow-monitor.js";
 import { workflowFieldText, workflowInputUpdates } from "cyberwave";
+import { useResource } from "./resource.js";
 
 export function WorkflowPlanner({
   client,
@@ -34,36 +34,25 @@ export function WorkflowPlanner({
   onCreated: (w: Workflow) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
-  const [inputContract, setInputContract] = useState<WorkflowInputContract>();
-  const [contractStatus, setContractStatus] = useState(
-    "Loading input definitions…",
+  const contract = useResource(
+    useMemo(
+      () => (signal: AbortSignal) =>
+        client.workflows.inputContract(workflow.uuid, { signal }),
+      [client, workflow],
+    ),
   );
-  const [contractReady, setContractReady] = useState(false);
-  useEffect(() => {
-    const abort = new AbortController();
-    setInputContract(undefined);
-    setContractReady(false);
-    setContractStatus("Loading input definitions…");
-    client.workflows
-      .inputContract(workflow.uuid, { signal: abort.signal })
-      .then((contract) => {
-        if (!abort.signal.aborted) {
-          setInputContract(contract);
-          setContractReady(true);
-          setContractStatus("");
-        }
-      })
-      .catch((error) => {
-        if (abort.signal.aborted) return;
-        if (error instanceof CyberwaveError && error.status === 404) {
-          setContractStatus(
-            "This backend uses legacy input metadata; typed definitions are unavailable.",
-          );
-          setContractReady(true);
-        } else setContractStatus(workflowError(error));
-      });
-    return () => abort.abort();
-  }, [client, workflow]);
+  const inputContract = contract.data;
+  const legacyContract =
+    contract.error instanceof CyberwaveError && contract.error.status === 404;
+  const contractReady =
+    !contract.loading && (!contract.error || legacyContract);
+  const contractStatus = contract.loading
+    ? "Loading input definitions…"
+    : legacyContract
+      ? "This backend uses legacy input metadata; typed definitions are unavailable."
+      : contract.error
+        ? workflowError(contract.error)
+        : "";
   const editable =
     !readOnly && contractReady && inputContract?.can_edit !== false;
   const executable = editable && inputContract?.can_execute !== false;

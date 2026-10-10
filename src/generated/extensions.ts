@@ -598,10 +598,7 @@ export interface components {
             node_uuid: string;
             /** Node Name */
             node_name: string;
-            /**
-             * Node Updated At
-             * Format: date-time
-             */
+            /** Node Updated At */
             node_updated_at: string;
             /** Name */
             name: string;
@@ -833,6 +830,7 @@ export interface operations {
                 related_twin_uuid?: string | null;
                 run_on_edge?: string | null;
                 slug?: string | null;
+                is_template?: boolean | null;
                 limit?: number | null;
                 offset?: number;
             };

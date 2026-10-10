@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CyberwaveClient, InspectionCampaign } from "cyberwave";
-import { workflowError } from "./workflow-monitor.tsx";
+import { workflowError } from "@cyberwave/react";
 import {
   validatedFindings,
   type FindingReference,

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { type CyberwaveClient, type Workflow } from "cyberwave";
 import { WorkflowPlanner } from "./workflow-planner.js";
+import { useResource } from "./resource.js";
 import { workflowError } from "./workflow-monitor.js";
 export function WorkflowCatalog({
   client,
@@ -35,8 +36,16 @@ export function WorkflowCatalog({
   }, []);
   const [rows, setRows] = useState<Workflow[]>([]),
     [selected, setSelected] = useState<Workflow>();
-  const [templates, setTemplates] = useState<Workflow[]>([]),
-    [showTemplates, setShowTemplates] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const templates = useResource(
+    useMemo(
+      () => (signal: AbortSignal) =>
+        showTemplates
+          ? client.workflows.templates({ signal })
+          : Promise.resolve([]),
+      [client, showTemplates],
+    ),
+  );
   const [view, setView] = useState<"all" | "scheduled">("all"),
     [revision, refresh] = useState(0),
     [page, setPage] = useState(0);
@@ -56,6 +65,7 @@ export function WorkflowCatalog({
           ...(serverPagination ? { limit: 21, offset: page * 20 } : {}),
           environment_uuid: environmentId,
           workspace_uuid: workspaceId,
+          is_template: false,
           ...(view === "scheduled" ? { trigger_type: "schedule" } : {}),
         },
         { signal: abort.signal },
@@ -84,19 +94,6 @@ export function WorkflowCatalog({
   useEffect(() => {
     setPage(0);
   }, [client, environmentId, workspaceId, view]);
-  useEffect(() => {
-    if (!showTemplates) return;
-    const abort = new AbortController();
-    client.workflows
-      .templates({ signal: abort.signal })
-      .then((items) => {
-        if (!abort.signal.aborted) setTemplates(items);
-      })
-      .catch((e) => {
-        if (!abort.signal.aborted) setStatus(workflowError(e));
-      });
-    return () => abort.abort();
-  }, [client, showTemplates]);
   async function select(uuid: string) {
     selection.current?.abort();
     const abort = new AbortController();
@@ -169,7 +166,11 @@ export function WorkflowCatalog({
       )}
       {showTemplates && (
         <div className="cw-resource-list">
-          {templates.map((template) => (
+          {templates.loading && <p role="status">Loading templates…</p>}
+          {templates.error && (
+            <p role="alert">{workflowError(templates.error)}</p>
+          )}
+          {templates.data?.map((template) => (
             <button
               className="cw-resource"
               key={template.uuid}

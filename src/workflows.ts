@@ -3,6 +3,7 @@ import type { Workflow, WorkflowNode, WorkflowInputContract } from "./index.js";
 export type WorkflowEditableField = {
   nodeId: string;
   nodeName: string;
+  nodeUpdatedAt?: string;
   name: string;
   value: unknown;
   source: "parameter" | "mapping";
@@ -17,6 +18,11 @@ const object = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+const isStaticMapping = (value: unknown) =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  (object(value).mode || "value") === "value";
 
 /** Existing template metadata describes configurable defaults, not arbitrary per-run variables.
  * Leave reference/expression/caller bindings intact. Bindings take precedence over parameters.
@@ -29,6 +35,7 @@ export function workflowEditableFields(
     return contract.fields.map((field) => ({
       nodeId: field.node_uuid,
       nodeName: field.node_name,
+      nodeUpdatedAt: field.node_updated_at,
       name: field.name,
       value: field.value,
       source: field.source,
@@ -53,7 +60,7 @@ export function workflowEditableFields(
       return [...names].flatMap<WorkflowEditableField>((name) => {
         const mapping = object(mappings[name]);
         if (name in mappings)
-          return mapping.mode === "value"
+          return isStaticMapping(mappings[name])
             ? [
                 {
                   nodeId: node.uuid,
@@ -89,6 +96,19 @@ export function workflowNodePatch(
   const mappings = { ...object(node.metadata.input_mappings) };
   for (const field of fields.filter((field) => field.nodeId === node.uuid)) {
     if (!Object.hasOwn(values, field.name)) continue;
+    if (field.nodeUpdatedAt && field.nodeUpdatedAt !== node.updated_at)
+      throw new Error(
+        "Input definitions changed. Reload the workflow before saving.",
+      );
+    const hasMapping = Object.hasOwn(mappings, field.name);
+    if (
+      field.source === "mapping"
+        ? !hasMapping || !isStaticMapping(mappings[field.name])
+        : hasMapping || !Object.hasOwn(parameters, field.name)
+    )
+      throw new Error(
+        "Input bindings changed. Reload the workflow before saving.",
+      );
     if (field.source === "mapping")
       mappings[field.name] = {
         ...object(mappings[field.name]),
@@ -171,6 +191,7 @@ export function workflowInputUpdates(
       if (typeof value === "number" && !Number.isFinite(value))
         throw new Error(field.name + " must be finite.");
       if (
+        !(value === null && !field.required) &&
         field.options?.length &&
         !field.options.some((option) => option.value === value)
       )

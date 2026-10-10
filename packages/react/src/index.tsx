@@ -3,18 +3,8 @@ import { DEFAULT_API_URL, type CyberwaveClient, type Environment, type Asset, ty
 const Context = createContext<CyberwaveClient | null>(null);
 export function CyberwaveProvider({ client, children }: { client: CyberwaveClient; children: ReactNode }) { return <Context.Provider value={client}>{children}</Context.Provider>; }
 export function useCyberwave() { const client = useContext(Context); if (!client) throw new Error('Wrap Cyberwave components in CyberwaveProvider.'); return client; }
-export type Resource<T> = { data?: T; loading: boolean; error?: Error };
-function useResource<T>(load: (signal: AbortSignal) => Promise<T>): Resource<T> {
-  const [state, setState] = useState<Resource<T> & { loader?: typeof load }>({ loading: true });
-  useEffect(() => {
-    const abort = new AbortController(); setState({ loader: load, loading: true });
-    load(abort.signal).then(data => { if (!abort.signal.aborted) setState({ loader: load, data, loading: false }); }, error => {
-      if (!abort.signal.aborted) setState({ loader: load, loading: false, error: error instanceof Error ? error : new Error(String(error)) });
-    });
-    return () => abort.abort();
-  }, [load]);
-  return state.loader === load ? state : { loading: true };
-}
+export type { Resource } from "./resource.js";
+import { useResource, type Resource } from "./resource.js";
 export function useEnvironment(uuid: string): Resource<EnvironmentSnapshot> {
   const client = useCyberwave();
   return useResource(useMemo(() => (signal: AbortSignal) => client.loadEnvironment(uuid, { signal }), [client, uuid]));

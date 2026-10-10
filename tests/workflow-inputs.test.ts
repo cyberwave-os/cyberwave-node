@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { Workflow } from "cyberwave";
-import { workflowInputUpdates } from "../src/workflow-inputs.ts";
+import type { Workflow } from "../dist/index.js";
+import { workflowInputUpdates } from "../dist/index.js";
 
 const workflow = {
   metadata: { editable_fields: ["duration", "twin_uuid", "speed"] },

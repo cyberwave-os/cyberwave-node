@@ -6,7 +6,7 @@ import {
 import type { CyberwaveClient, Environment } from "cyberwave";
 import { MaintenanceSource } from "./maintenance-source.tsx";
 import type { FindingReference } from "./maintenance-domain.ts";
-import { workflowError } from "./workflow-monitor.tsx";
+import { workflowError } from "@cyberwave/react";
 export function StoredVerification({ client }: { client: CyberwaveClient }) {
   const [environment, setEnvironment] = useState<Environment>();
   const [baseline, setBaseline] = useState<FindingReference>();
