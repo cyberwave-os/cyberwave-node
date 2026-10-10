@@ -21,6 +21,7 @@ export function createGis(container: HTMLElement, anchor: Anchor,
   const inverse = Matrix4.inverseTransformation(transform, new Matrix4());
   const saved = new Map<string, Waypoint>();
   let route: Entity | undefined;
+  let overlays: { name: string; points: Position[]; color: string }[] = [];
 
   function project(point: Position): Cartesian3 {
     const enu = localToEnu(point, anchor.yawDegrees);
@@ -45,6 +46,8 @@ export function createGis(container: HTMLElement, anchor: Anchor,
 
   function update(twins: Twin[], waypoints: Waypoint[], draft: Draft) {
     viewer.entities.removeAll(); saved.clear();
+    for (const [index, overlay] of overlays.entries()) viewer.entities.add({ id: `overlay:${index}`, name: overlay.name,
+      polygon: { hierarchy: overlay.points.map(project), material: Color.fromCssColorString(overlay.color).withAlpha(.3), perPositionHeight: true, outline: true, outlineColor: Color.fromCssColorString(overlay.color) } });
     for (const twin of twins) viewer.entities.add({ id: `twin:${twin.uuid}`, name: twin.name,
       position: project(twin.position), point: { pixelSize: 16, color: Color.AQUA,
         heightReference: HeightReference.NONE, disableDepthTestDistance: Number.POSITIVE_INFINITY } });
@@ -65,5 +68,6 @@ export function createGis(container: HTMLElement, anchor: Anchor,
 
   viewer.camera.setView({ destination: Cartesian3.fromDegrees(anchor.longitude, anchor.latitude, anchor.height + 600) });
   return { update, destroy: () => { events.destroy(); viewer.destroy(); },
+    setOverlays: (value: typeof overlays) => { overlays = value; },
     focusRoute: () => { if (route) void viewer.zoomTo(route); } };
 }

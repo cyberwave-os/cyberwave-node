@@ -1,9 +1,25 @@
 import createClient from 'openapi-fetch';
 import type { paths, components } from './generated/schema.js';
+import type { paths as ExtensionPaths, components as ExtensionComponents } from './generated/extensions.js';
 export type { paths, components } from './generated/schema.js';
 export type Asset = components['schemas']['AssetSchema'];
 export type Environment = components['schemas']['EnvironmentSchema'];
 export type Twin = components['schemas']['TwinSchema'];
+/** Preview contract: requires a backend with the inspection extension deployed. */
+export type InspectionCampaign = ExtensionComponents['schemas']['InspectionCampaignDetailSchema'];
+export type InspectionManifest = ExtensionComponents['schemas']['ImportInspectionCampaignInput'];
+export type InspectionReviewInput = ExtensionComponents['schemas']['CreateInspectionReviewInput'];
+export type Mission = components['schemas']['MissionSchema'];
+export type MissionExecution = components['schemas']['MissionExecutionSchema'];
+export type Workflow = components['schemas']['WorkflowSchema'];
+export type WorkflowExecution = components['schemas']['WorkflowExecutionSchema'];
+export type WorkflowQuery = NonNullable<paths['/api/v1/workflows']['get']['parameters']['query']>;
+export type Recording = components['schemas']['RecordingListItem'];
+export type RecordingQuery = NonNullable<paths['/api/v1/environments/{uuid}/recordings']['get']['parameters']['query']>;
+export type RecordingPlayback =
+  | { status: 'ready'; sources: components['schemas']['RecordingSourcesSchema'] }
+  | { status: 'materializing'; detail: string; retryAfterSeconds?: number | null; readiness: Record<string, unknown> };
+export { recordingWindow, recordingVideos, mediaSecondsToTimestampUs } from './recordings.js';
 export const DEFAULT_API_URL = 'https://api.cyberwave.com';
 
 export function normalizeApiUrl(value = DEFAULT_API_URL): string {
@@ -49,7 +65,7 @@ export function assetModel(asset: Pick<Asset, 'urdf_file' | 'glb_file'>, baseUrl
 export function createCyberwave(options: ClientOptions = {}) {
   const baseUrl = normalizeApiUrl(options.baseUrl);
   const transport = options.fetch ?? globalThis.fetch;
-  const rest = createClient<paths>({ baseUrl, fetch: async (request) => {
+  const rest = createClient<paths & ExtensionPaths>({ baseUrl, fetch: async (request) => {
     if (new URL(request.url).origin !== baseUrl) throw new Error('API credentials cannot cross origins.');
     const headers = new Headers(request.headers);
     headers.delete('Authorization');
@@ -69,11 +85,44 @@ export function createCyberwave(options: ClientOptions = {}) {
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}', { params: { path: { uuid } }, ...opts })),
     twins: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/twins', { params: { path: { uuid } }, ...opts })),
     waypoints: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/waypoints', { params: { path: { uuid } }, ...opts })),
+    /** Additive development endpoint. Older backends return 404; per-twin discovery remains available. */
+    missions: (uuid: string, query: {limit?: number; offset?: number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/missions', { params: { path: { uuid }, query }, ...opts })),
   };
   const assets = {
     list: (query: { search?: string; registry_id?: string; limit?: number; offset?: number; public_only?: boolean } = {}, opts: ReadOptions = {}) =>
       data(rest.GET('/api/v1/assets', { params: { query }, ...opts })),
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/assets/{uuid}', { params: { path: { uuid } }, ...opts })),
+  };
+  const missions = {
+    forWorkspace: (workspace_uuid: string, query: {environment_uuid?:string;twin_uuid?:string;limit?:number;offset?:number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workspaces/{workspace_uuid}/missions', {params:{path:{workspace_uuid},query},...opts})),
+    list: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{uuid}/missions', { params: { path: { uuid } }, ...opts })),
+    get: (twin_uuid: string, uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{twin_uuid}/missions/{uuid}', { params: { path: { twin_uuid, uuid } }, ...opts })),
+    executions: (twin_uuid: string, uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/twins/{twin_uuid}/missions/{uuid}/executions', { params: { path: { twin_uuid, uuid } }, ...opts })),
+  };
+  /** Existing workflow engine. List is currently unpaginated; always scope large catalogs. */
+  const workflows = {
+    templates: (opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/templates', opts)),
+    list: (query: WorkflowQuery = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows', { params: { query }, ...opts })),
+    get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}', { params: { path: { uuid } }, ...opts })),
+    executions: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/workflows/{uuid}/executions', { params: { path: { uuid } }, ...opts })),
+  };
+  const recordings = {
+    list: (uuid: string, query: RecordingQuery = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/recordings', { params: { path: { uuid }, query }, ...opts })),
+    async playback(uuid: string, recording_uuid: string, opts: ReadOptions = {}): Promise<RecordingPlayback> {
+      const result = await rest.GET('/api/v1/environments/{uuid}/recordings/{recording_uuid}/data', { params: { path: { uuid, recording_uuid } }, ...opts });
+      if (!result.response.ok) throw new CyberwaveError(result.response.status, result.error);
+      const body = result.data!;
+      if ('items' in body) return { status: 'ready', sources: body.items };
+      return { status: 'materializing', detail: body.detail, retryAfterSeconds: body.retry_after_seconds, readiness: body.playback_readiness };
+    },
+  };
+  /** Additive development API. Import and review persist metadata; neither commands a device. */
+  const inspections = {
+    list: (uuid: string, query: {limit?: number; offset?: number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/inspection-campaigns', {params:{path:{uuid},query},...opts})),
+    get: (uuid: string, campaign_uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/inspection-campaigns/{campaign_uuid}', {params:{path:{uuid,campaign_uuid}},...opts})),
+    importCampaign: (uuid: string, body: InspectionManifest, opts: ReadOptions = {}) => data(rest.POST('/api/v1/environments/{uuid}/inspection-campaigns', {params:{path:{uuid}},body,...opts})),
+    history: (uuid: string, defect_uuid: string, query: {limit?:number;offset?:number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/inspection-defects/{defect_uuid}/observations', {params:{path:{uuid,defect_uuid},query},...opts})),
+    review: (uuid: string, observation_uuid: string, body: InspectionReviewInput, opts: ReadOptions = {}) => data(rest.POST('/api/v1/environments/{uuid}/inspection-observations/{observation_uuid}/reviews', {params:{path:{uuid,observation_uuid}},body,...opts})),
   };
   async function loadEnvironment(uuid: string, opts: ReadOptions = {}): Promise<EnvironmentSnapshot> {
     const [environment, twins] = await Promise.all([environments.get(uuid, opts), environments.twins(uuid, opts)]);
@@ -105,6 +154,6 @@ export function createCyberwave(options: ClientOptions = {}) {
     }
     return { environment, twins, objects, warnings };
   }
-  return { baseUrl, rest, environments, assets, loadEnvironment };
+  return { baseUrl, rest, environments, assets, missions, workflows, recordings, inspections, loadEnvironment };
 }
 export type CyberwaveClient = ReturnType<typeof createCyberwave>;

@@ -30,7 +30,7 @@ export function ConnectionPanel({ baseUrl = DEFAULT_API_URL, authenticated = fal
     try { await onConnect(input); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   return <form className="cw-connection" onSubmit={connect}>
-    <div className="cw-connection-title"><span className="cw-dot" /><strong>{authenticated ? 'Authenticated session' : 'Public catalog'}</strong><small>Read-only connection</small></div>
+    <div className="cw-connection-title"><span className="cw-dot" /><strong>{authenticated ? 'Authenticated session' : 'Public catalog'}</strong><small>API connection</small></div>
     <label>API origin<input aria-label="API origin" type="url" required value={url} onChange={e => { setUrl(e.target.value); setToken(''); }} list="cw-api-origins" /></label>
     <datalist id="cw-api-origins"><option value={DEFAULT_API_URL} /><option value="http://localhost:8000" /></datalist>
     <label>API token <small>optional for public assets</small><input aria-label="API token" type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} placeholder="Paste a token for this origin" /></label>
@@ -69,4 +69,27 @@ export function EnvironmentSummary({ snapshot }: { snapshot: EnvironmentSnapshot
     <div className="cw-metrics"><span><strong>{snapshot.twins.length}</strong> twins</span><span><strong>{snapshot.objects.filter(x => x.model).length}</strong> renderable</span></div>
     {snapshot.warnings.length > 0 && <details><summary>{snapshot.warnings.length} loading notes</summary><ul>{snapshot.warnings.map((note, i) => <li key={i}>{note}</li>)}</ul></details>}
   </section>;
+}
+
+export function RecordingBrowser({ environmentUuid, onSelect, selectedId }: { environmentUuid: string; onSelect: (recording: import('cyberwave').Recording) => void; selectedId?: string }) {
+  // Reset pagination when the environment changes, including within one provider.
+  return <RecordingPage key={environmentUuid} environmentUuid={environmentUuid} onSelect={onSelect} selectedId={selectedId} />;
+}
+function RecordingPage({ environmentUuid, onSelect, selectedId }: { environmentUuid: string; onSelect: (recording: import('cyberwave').Recording) => void; selectedId?: string }) {
+  const client = useCyberwave(), [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
+  const cursor = cursors[cursors.length - 1];
+  const state = useResource(useMemo(() => (signal: AbortSignal) => client.recordings.list(environmentUuid, { limit: 12, cursor }, { signal }), [client, environmentUuid, cursor]));
+  return <section className="cw-browser"><Status {...state} empty={!state.data?.items.length} />
+    <div className="cw-resource-list">{state.data?.items.map(item => <button className={`cw-resource ${item.uuid === selectedId ? 'cw-selected' : ''}`} key={item.uuid} onClick={() => onSelect(item)} aria-pressed={item.uuid === selectedId}><span><strong>{String(item.metadata.session_name_defined_by_user || item.metadata.recording_type || 'Recording')}</strong><small>{item.uuid}</small><small>{String(item.metadata.source_type || item.metadata.context || 'Source not specified')} · {String(item.playback_readiness?.state || 'Readiness unknown')}</small></span></button>)}</div>
+    <div className="cw-pagination"><button className="cw-button" disabled={state.loading || cursors.length === 1} onClick={() => setCursors(cursors.slice(0, -1))}>Previous</button><span>Page {cursors.length}</span><button className="cw-button" disabled={state.loading || !state.data?.has_more || !state.data.next_cursor} onClick={() => setCursors([...cursors, state.data?.next_cursor || undefined])}>Next</button></div>
+  </section>;
+}
+export function useRecordingPlayback(environmentUuid: string, recordingUuid: string, refreshKey = 0) {
+  const client = useCyberwave();
+  return useResource(useMemo(() => (signal: AbortSignal) => client.recordings.playback(environmentUuid, recordingUuid, { signal }), [client, environmentUuid, recordingUuid, refreshKey]));
+}
+/** Native media playback. Call onTime for a media-relative cursor; precise sensor
+ * synchronization belongs in an application's clock/SEI adapter. */
+export function RecordingVideo({ src, onTime, onError }: { src: string; onTime?: (seconds: number) => void; onError?: () => void }) {
+  return <video key={src} className="cw-recording-video" src={src} controls playsInline preload="metadata" onTimeUpdate={event => onTime?.(event.currentTarget.currentTime)} onError={onError} />;
 }

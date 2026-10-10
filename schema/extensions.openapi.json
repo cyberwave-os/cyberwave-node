@@ -1,0 +1,1126 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cyberwave development extensions",
+    "version": "0.1.0-preview",
+    "description": "Additive endpoints implemented on CYB-4234; deployment availability must be checked separately."
+  },
+  "paths": {
+    "/api/v1/environments/{uuid}/inspection-campaigns": {
+      "post": {
+        "operationId": "src_app_api_inspections_import_inspection_campaign",
+        "summary": "Import Inspection Campaign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionCampaignDetailSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Atomically import metadata; repeat the same external_id and body to retry.\n\nChanges require a new campaign external_id. Existing source observations and\nreview revisions are never overwritten by an import.",
+        "tags": [
+          "Inspections"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportInspectionCampaignInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "src_app_api_inspections_list_inspection_campaigns",
+        "summary": "List Inspection Campaigns",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InspectionCampaignSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Inspections"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/inspection-campaigns/{campaign_uuid}": {
+      "get": {
+        "operationId": "src_app_api_inspections_get_inspection_campaign",
+        "summary": "Get Inspection Campaign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "campaign_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionCampaignDetailSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Inspections"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/inspection-defects/{defect_uuid}/observations": {
+      "get": {
+        "operationId": "src_app_api_inspections_get_inspection_defect_history",
+        "summary": "Get Inspection Defect History",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "defect_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Defect Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InspectionObservationSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Inspections"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/inspection-observations/{observation_uuid}/reviews": {
+      "post": {
+        "operationId": "src_app_api_inspections_review_inspection_observation",
+        "summary": "Review Inspection Observation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "observation_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Observation Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionReviewSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Append a review using optimistic concurrency; retries return the same revision.",
+        "tags": [
+          "Inspections"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInspectionReviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/missions": {
+      "get": {
+        "operationId": "src_app_api_missions_list_environment_missions",
+        "summary": "List Environment Missions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MissionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Discover definitions assigned to visible twins currently in an environment.\n\nThis is a read projection, not a new mission owner or a multi-environment plan.\nExecutions (including scheduled runs) remain nested under each mission.",
+        "tags": [
+          "Missions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/missions": {
+      "get": {
+        "operationId": "src_app_api_missions_list_workspace_missions",
+        "summary": "List Workspace Missions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "environment_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Environment Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "twin_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Twin Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MissionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Workspace governance view, scoped to the target twin and caller's access.",
+        "tags": [
+          "Missions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ImportInspectionCampaignInput": {
+        "additionalProperties": false,
+        "properties": {
+          "external_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "External Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "asset_reference": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Asset Reference",
+            "type": "string"
+          },
+          "reference_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Reference Version",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "limitations": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Limitations",
+            "type": "string"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/InspectionObservationInput"
+            },
+            "maxItems": 1000,
+            "title": "Observations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "external_id",
+          "name",
+          "asset_reference",
+          "reference_version",
+          "observations"
+        ],
+        "title": "ImportInspectionCampaignInput",
+        "type": "object"
+      },
+      "CreateInspectionReviewInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/InspectionAssessmentInput"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "idempotency_key",
+          "reason",
+          "assessment"
+        ],
+        "title": "CreateInspectionReviewInput",
+        "type": "object"
+      },
+      "InspectionCampaignDetailSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "asset_reference": {
+            "title": "Asset Reference",
+            "type": "string"
+          },
+          "reference_version": {
+            "title": "Reference Version",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "limitations": {
+            "title": "Limitations",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/InspectionObservationSchema"
+            },
+            "title": "Observations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "uuid",
+          "external_id",
+          "name",
+          "asset_reference",
+          "reference_version",
+          "coverage",
+          "limitations",
+          "created_at",
+          "observations"
+        ],
+        "title": "InspectionCampaignDetailSchema",
+        "type": "object"
+      },
+      "InspectionReviewSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/InspectionAssessmentInput"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "created_by_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Uuid"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "revision",
+          "assessment",
+          "reason",
+          "created_by_uuid",
+          "created_at"
+        ],
+        "title": "InspectionReviewSchema",
+        "type": "object"
+      },
+      "InspectionCampaignSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "asset_reference": {
+            "title": "Asset Reference",
+            "type": "string"
+          },
+          "reference_version": {
+            "title": "Reference Version",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "limitations": {
+            "title": "Limitations",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "external_id",
+          "name",
+          "asset_reference",
+          "reference_version",
+          "coverage",
+          "limitations",
+          "created_at"
+        ],
+        "title": "InspectionCampaignSchema",
+        "type": "object"
+      },
+      "InspectionObservationSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "campaign_uuid": {
+            "format": "uuid",
+            "title": "Campaign Uuid",
+            "type": "string"
+          },
+          "defect_uuid": {
+            "format": "uuid",
+            "title": "Defect Uuid",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/InspectionObservationInput"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/InspectionReviewSchema"
+            },
+            "title": "Reviews",
+            "type": "array"
+          }
+        },
+        "required": [
+          "uuid",
+          "campaign_uuid",
+          "defect_uuid",
+          "source",
+          "reviews"
+        ],
+        "title": "InspectionObservationSchema",
+        "type": "object"
+      },
+      "MissionSchema": {
+        "description": "Schema for Mission definition response.",
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "twin_uuid": {
+            "title": "Twin Uuid",
+            "type": "string"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          },
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          },
+          "task_sequence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Task Sequence",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "name",
+          "description",
+          "twin_uuid",
+          "task_sequence",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MissionSchema",
+        "type": "object"
+      },
+      "InspectionAssessmentInput": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "validated",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "priority": {
+            "enum": [
+              "routine",
+              "planned",
+              "urgent"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "technical_state": {
+            "enum": [
+              "new",
+              "stable",
+              "worsened",
+              "improved",
+              "not-assessable"
+            ],
+            "title": "Technical State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "severity",
+          "priority",
+          "technical_state"
+        ],
+        "title": "InspectionAssessmentInput",
+        "type": "object"
+      },
+      "InspectionObservationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "external_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "External Id",
+            "type": "string"
+          },
+          "defect_external_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Defect External Id",
+            "type": "string"
+          },
+          "kind": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "observed": {
+            "default": true,
+            "title": "Observed",
+            "type": "boolean"
+          },
+          "chainage_m": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chainage M"
+          },
+          "location_precision_m": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Precision M"
+          },
+          "limitation": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Limitation",
+            "type": "string"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InspectionEvidenceInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InspectionMeasurementInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "model_run_reference": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Run Reference"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          }
+        },
+        "required": [
+          "external_id",
+          "defect_external_id",
+          "kind"
+        ],
+        "title": "InspectionObservationInput",
+        "type": "object"
+      },
+      "InspectionEvidenceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          },
+          "timestamp_us": {
+            "anyOf": [
+              {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Us"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "InspectionEvidenceInput",
+        "type": "object"
+      },
+      "InspectionMeasurementInput": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "minimum": 0,
+            "title": "Value",
+            "type": "number"
+          },
+          "unit": {
+            "enum": [
+              "mm",
+              "cm",
+              "m",
+              "px"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "uncertainty": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty"
+          },
+          "method": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Method",
+            "type": "string"
+          },
+          "calibration_reference": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Reference"
+          }
+        },
+        "required": [
+          "value",
+          "unit",
+          "method"
+        ],
+        "title": "InspectionMeasurementInput",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "CustomTokenAuthentication": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization"
+      }
+    }
+  }
+}

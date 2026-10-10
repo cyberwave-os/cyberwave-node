@@ -16,7 +16,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm generate
-      - run: git diff --exit-code -- src/generated/schema.ts schema/sha256.txt
+      - run: git diff --exit-code -- src/generated schema
       - run: pnpm build
       - run: pnpm test
       - run: pnpm pack:check

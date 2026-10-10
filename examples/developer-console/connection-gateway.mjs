@@ -1,9 +1,13 @@
-/** Read-only development BFF. Sessions and tokens expire in memory; never log credentials. */
+/** Development BFF: remote reads, explicit local inspection metadata writes. */
 import { randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { normalizeApiUrl } from 'cyberwave';
 const ttl = 60 * 60 * 1000;
-const allowed = /^\/api\/v1\/(assets(?:\/[a-zA-Z0-9-]+)?|environments(?:\/[a-zA-Z0-9-]+(?:\/(?:twins|waypoints))?)?)$/;
+const allowed = /^\/api\/v1\/(assets(?:\/[a-zA-Z0-9-]+)?|environments(?:\/[a-zA-Z0-9-]+(?:\/(?:twins|waypoints|recordings(?:\/[a-zA-Z0-9_-]+\/data)?))?)?|twins\/[a-zA-Z0-9-]+\/missions(?:\/[a-zA-Z0-9-]+(?:\/executions)?)?)$/;
+const inspectionRead = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:missions|inspection-campaigns(?:\/[a-zA-Z0-9-]+)?|inspection-defects\/[a-zA-Z0-9-]+\/observations)$/;
+const inspectionWrite = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:inspection-campaigns|inspection-observations\/[a-zA-Z0-9-]+\/reviews)$/;
+const governanceRead = /^\/api\/v1\/workspaces\/[a-zA-Z0-9-]+\/missions$/;
+const workflowRead = /^\/api\/v1\/workflows(?:\/[a-zA-Z0-9-]+(?:\/executions)?)?$/;
 export function createConnectionGateway({ localToken, localOrigin = 'http://localhost:8000' } = {}, transport = fetch) {
   const sessions = new Map();
   function registerResources(data, session) {
@@ -16,6 +20,12 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
       session.files.add(url.href);
       const project = url.href.match(/^(.*\/urdf_projects\/[^/]+\/)/)?.[1];
       if (project) session.roots.add(project);
+    }
+    // Playback envelopes: register exact signed camera URLs, never arbitrary metadata URLs.
+    for (const entry of Object.values(data.items?.twin_data || {})) {
+      const raw = entry?.camera?.signed_url;
+      if (typeof raw !== 'string') continue;
+      try { const url = new URL(raw); if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) session.files.add(url.href); } catch {}
     }
   }
   return async function handle(req, res, url, send) {
@@ -42,23 +52,33 @@ export function createConnectionGateway({ localToken, localOrigin = 'http://loca
     }
     if (!session) { send(401, { detail: 'Connect to an API first. Session may have expired.' }); return true; }
     if (url.pathname === '/gateway/connection' && req.method === 'GET') { send(200, { baseUrl: session.origin, authenticated: !!session.token }); return true; }
-    if (req.method !== 'GET') { send(405, { detail: 'This connection is read-only.' }); return true; }
     if (url.pathname.startsWith('/gateway/rest/')) {
       const path = url.pathname.slice('/gateway/rest'.length);
-      if (!allowed.test(path)) { send(403, { detail: 'Unsupported read operation' }); return true; }
-      const upstream = await transport(new URL(path + url.search, session.origin), { redirect: 'error', signal: AbortSignal.timeout(20000), headers: session.token ? { Authorization: `Bearer ${session.token}` } : {} });
-      if (!upstream.ok) { send(upstream.status, { detail: `Cyberwave returned ${upstream.status}` }); return true; }
-      const data = await upstream.json(); registerResources(data, session); send(200, data); return true;
+      let body;
+      if (req.method !== 'GET') {
+        const local = ['localhost','127.0.0.1','[::1]'].includes(new URL(session.origin).hostname);
+        if (req.method !== 'POST' || !local || !session.token || !inspectionWrite.test(path)) { send(405, { detail: 'Only authenticated local inspection metadata writes are enabled.' }); return true; }
+        body = ''; for await (const chunk of req) { body += chunk; if (Buffer.byteLength(body) > 1024*1024) { send(413,{detail:'Inspection manifest too large'}); return true; } }
+        JSON.parse(body);
+      } else if (!allowed.test(path) && !inspectionRead.test(path) && !governanceRead.test(path) && !workflowRead.test(path)) { send(403, { detail: 'Unsupported read operation' }); return true; }
+      const upstream = await transport(new URL(path + url.search, session.origin), { method:req.method, body, redirect: 'error', signal: AbortSignal.timeout(20000), headers: { ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}), ...(body ? {'Content-Type':'application/json'} : {}) } });
+      if (!upstream.ok) { send(upstream.status, { detail: upstream.status===409?'Conflict: reload the latest revision or use a new campaign identifier.':`Cyberwave returned ${upstream.status}` }); return true; }
+      const data = await upstream.json(); registerResources(data, session); send(upstream.status, data); return true;
     }
+    if (req.method !== 'GET') { send(405, { detail: 'This resource is read-only.' }); return true; }
     if (url.pathname === '/gateway/media') {
       const resource = new URL(url.searchParams.get('url'));
       if (!session.files.has(resource.href) && ![...session.roots].some(root => resource.href.startsWith(root))) {
         send(403, { detail: 'Resource was not returned by this connection.' }); return true;
       }
       // Never forward an API token to storage/CDN URLs, even when on the API origin.
-      const upstream = await transport(resource, { redirect: 'error', signal: AbortSignal.timeout(60000) });
+      const range = req.headers.range;
+      if (range && !/^bytes=\d*-\d*$/.test(range)) { send(400, { detail: 'Only a single byte range is supported' }); return true; }
+      const upstream = await transport(resource, { redirect: 'error', signal: AbortSignal.timeout(60000), ...(range ? { headers: { Range: range } } : {}) });
       if (!upstream.ok || !upstream.body) { send(upstream.status, { detail: 'Model resource unavailable' }); return true; }
-      res.writeHead(200, { 'Content-Type': upstream.headers.get('content-type') || 'application/octet-stream', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+      const headers = { 'Content-Type': upstream.headers.get('content-type') || 'application/octet-stream', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' };
+      for (const name of ['content-range', 'accept-ranges', 'content-length']) if (upstream.headers.has(name)) headers[name] = upstream.headers.get(name);
+      res.writeHead(upstream.status, headers);
       const stream = Readable.fromWeb(upstream.body); stream.on('error', () => res.destroy()); res.on('close', () => stream.destroy()); stream.pipe(res); return true;
     }
     send(404, { detail: 'Unknown gateway route' }); return true;

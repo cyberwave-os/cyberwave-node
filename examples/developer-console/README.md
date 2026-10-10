@@ -18,7 +18,7 @@ The explorer and asset studio default to `https://api.cyberwave.com`. Connect an
 
 If a server-side `CYBERWAVE_API_TOKEN` is configured for the local gateway's exact origin, the explorer can use it when you explicitly connect to that local origin. It is never used for production or another custom origin. The source of the current connection is shown above the scene.
 
-The connection panel configures **read-only browsing**. Control examples retain their separately configured local environment, target and policy. Selecting production in the explorer never retargets command delivery. A static frontend alone is insufficient: `/gateway` and `/api` need the example BFF. This loopback-only server is a development tool, not a publicly deployable multi-user proxy.
+The connection panel configures **browsing and local inspection metadata writes**. Remote origins remain read-only in this example gateway. Control examples retain their separately configured local environment, target and policy. Selecting production in the explorer never retargets command delivery. A static frontend alone is insufficient: `/gateway` and `/api` need the example BFF. This loopback-only server is a development tool, not a publicly deployable multi-user proxy.
 
 Choose **Unitree Go2** to reproduce production URDF/DAE model loading. No model files or private environment data are bundled. Models are fetched from the selected API's returned resource URLs. Use real local assets/environments to validate project-specific file formats and frame conventions; unsupported visuals are reported in loading notes.
 
@@ -94,7 +94,7 @@ The globe uses Cesium's generated grid imagery: no ion token, external tiles, or
 | `src/main.ts` | Composition root connecting gestures to drafts and dedicated buttons to commands. |
 | `src/simulation.ts` | Pure explicit-clock route sampling, keyboard intent compiler, TTL-aware reference consumer. |
 | `src/keyboard-telecontrol.ts` | Reusable input UI controller and lifecycle, independent of 3D. |
-| `src/robot-view.ts` | Procedural 3D projection of supplied simulation/observed poses; no command imports. |
+| `src/robot-view.ts` | Real URDF/GLB projection of supplied simulation/observed poses; no command imports. |
 | `src/robot-environment.ts` | Composition root for runtime modes, controller UI, observation, and physics lifecycle. |
 | `src/example-shell.ts` / `.css` | Shared branded header and grouped navigation; no framework or renderer dependency. |
 | `controller-gateway.mjs` | Server target/policy checks, input ownership/freshness, local MQTT publisher and reference consumer. |
@@ -107,4 +107,20 @@ Closing the view disposes Cesium and observation timers without cancelling auton
 
 All settings are documented in `.env.example` and are local-only; no deployment workflow or Terraform settings are introduced.
 
-Run `pnpm test` from the repository root for the client and gateway/controller checks. The production build uses multiple Vite HTML entries. Cesium is isolated to the GIS page; the environment and robot views use the optional Three.js package. [Vite multi-page applications](https://vite.dev/guide/build.html#multi-page-app).
+Run `pnpm test` from the repository root for the client and gateway/controller checks. The production build uses multiple Vite HTML entries. Cesium is isolated to the GIS and aerial planning pages; the environment and robot views use the optional Three.js package. [Vite multi-page applications](https://vite.dev/guide/build.html#multi-page-app).
+
+
+## Inspection and aerial workbenches
+
+- `/aerial-inspection.html`: rectangular coverage draft, camera overlap, multirotor/fixed-wing/VTOL profiles, runway/catapult/recovery choices, survey-only time, energy reserve and turn-radius diagnostics. Cesium displays a synthetic local reference. The animation is a kinematic cursor; it does not fly the launch/recovery phases or model aerodynamics. An explicit ISO offset is required for a requested start. Exported JSON remains `draft-needs-validation`; there is no flight-upload button.
+- `/inspection-workbench.html`: synthetic linear asset with two campaigns and three persistent defects. Demonstrates overlapping uncertainty, pixel-only measurement and missing coverage, independent severity/priority/technical state, reasoned review revisions and validated-only handoff export. A local video can be opened without upload. The local draft resets on reload. The optional development-backend panel imports two synthetic manifests and saves authenticated review revisions. Remote writes are disabled in this example. Delivery acceptance, video ingestion and maintenance exchange remain follow-up work.
+- `/recording-review.html`: connect to the real API, select an environment and browse its paginated recording catalog. Load playback sources lazily, handle materializing/error/unsupported sources, refresh expired signed URLs and play finalized MP4 tracks. This does not fabricate clips when local storage lacks a playable recording.
+
+Reusable public APIs live in `cyberwave` and `@cyberwave/react`. The experimental application logic in `src/aerial-domain.ts` and `src/inspection-domain.ts` stays in the examples while broader domain contracts mature. Extend the existing backend coverage planner and mission/workflow scheduling services in your integration instead of embedding a second scheduler or flight controller in the UI.
+
+Technical references: [PX4 fixed-wing mission](https://docs.px4.io/main/en/flight_modes_fw/mission), [PX4 takeoff](https://docs.px4.io/main/en/flight_modes_fw/takeoff), [VTOL mission](https://docs.px4.io/main/en/flight_modes_vtol/mission), [MAVLink mission protocol](https://mavlink.io/en/services/mission.html). In particular, upload acknowledgment and current/reached mission-item telemetry are different from generic command acceptance. Pin the target firmware and vehicle capability profile in a production adapter.
+
+
+## Mission library and development backend
+
+[Workflows, missions & runs](http://127.0.0.1:5173/mission-library.html) is example 11. It explains reusable primitives across logistics, inspection and manufacturing, browses task-sequence missions and existing workflow plans by environment or workspace, and reads their independent executions. It explains why composite planning should reuse the workflow engine. The Mission views paginate on the server; the existing workflow listing is still unpaginated and needs a bounded catalog before large-scale governance. The backend adds environment/workspace read projections and four inspection records with idempotent import and append-only review. See the [SDK architecture and API guide](https://github.com/cyberwave-os/cyberwave-node/tree/codex/cyb-4234-javascript-sdk-components#missions-simply) for exact calls and limitations. These endpoints require this development backend and are not claimed to be deployed in production.

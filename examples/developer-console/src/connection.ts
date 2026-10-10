@@ -11,9 +11,8 @@ export const mediaUrl = (url: string) => `/gateway/media?url=${encodeURIComponen
 export function connectedClient(connection: Connection) {
   const proxyFetch: ClientOptions['fetch'] = async input => {
     const request = input instanceof Request ? input : new Request(input);
-    if (request.method !== 'GET') throw new Error('The example connection only supports reads.');
     const url = new URL(request.url);
-    return fetch(`/gateway/rest${url.pathname}${url.search}`, { signal: request.signal, credentials: 'same-origin' });
+    return fetch(`/gateway/rest${url.pathname}${url.search}`, { method:request.method, body:request.method==='GET'?undefined:await request.text(), headers:{'Content-Type':'application/json'}, signal: request.signal, credentials: 'same-origin' });
   };
   return createCyberwave({ baseUrl: connection.baseUrl, fetch: proxyFetch });
 }

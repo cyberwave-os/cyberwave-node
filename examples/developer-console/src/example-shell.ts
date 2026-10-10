@@ -4,12 +4,14 @@ const groups = [
   { name: 'Visualization · 2', items: [['/', '03 · Cesium GIS & mission drafting'], ['/twin-monitor.html', '04 · Twin & camera monitor']] },
   { name: 'Simulation · 2', items: [['/mission-simulation.html', '05 · Mission timeline'], ['/robot-environment.html', '06 · Robot environment & runtime modes']] },
   { name: 'Command & control · 1', items: [['/keyboard-telecontrol.html', '07 · Keyboard controller input']] },
+  { name: 'Planning & governance · 1', items: [['/mission-library.html', '11 · Workflows, missions & runs']] },
+  { name: 'Inspection & GIS · 3', items: [['/aerial-inspection.html', '08 · Aerial inspection planning'], ['/inspection-workbench.html', '09 · Campaign & evidence review'], ['/recording-review.html', '10 · Recording catalog & playback']] },
 ];
 const header = document.createElement('header'); header.className = 'example-header';
 const brand = document.createElement('a'); brand.href = '/'; brand.className = 'example-brand';
 const logo = document.createElement('img'); logo.src = '/cyberwave-logo.png'; logo.alt = 'Cyberwave'; brand.append(logo);
 const caption = document.createElement('span'); caption.textContent = 'Developer examples'; brand.append(caption);
-const label = document.createElement('label'); label.className = 'example-picker'; label.textContent = 'Examples · 7';
+const label = document.createElement('label'); label.className = 'example-picker'; label.textContent = `Examples · ${groups.reduce((sum, group) => sum + group.items.length, 0)}`;
 const select = document.createElement('select'); select.setAttribute('aria-label', 'Choose developer example');
 for (const group of groups) { const node = document.createElement('optgroup'); node.label = group.name;
   for (const [path, title] of group.items) { const option = document.createElement('option'); option.value = path; option.textContent = title;

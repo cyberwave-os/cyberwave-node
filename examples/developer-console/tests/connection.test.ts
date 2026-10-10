@@ -5,8 +5,8 @@ const settings = { mode: 'fixture', apiUrl: 'http://localhost:8000', token: 'loc
 async function run(upstream, callback) {
   const server = createGateway(settings, upstream); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`; let cookie = '';
-  const request = async (path, method = 'GET', body, origin = 'http://127.0.0.1:5173') => {
-    const result = await fetch(base + path, { method, headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const request = async (path, method = 'GET', body, origin = 'http://127.0.0.1:5173', extraHeaders = {}) => {
+    const result = await fetch(base + path, { method, headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/json', ...extraHeaders }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (result.headers.get('set-cookie')) cookie = result.headers.get('set-cookie').split(';')[0]; return result;
   };
   try { await callback(request); } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
@@ -21,6 +21,19 @@ test('production is read-only and does not inherit the local token', async () =>
     assert.equal((await request('/gateway/rest/api/v1/assets', 'POST', {})).status, 405);
     assert.equal((await request('/gateway/rest/api/v1/twins/robot/navigation')).status, 403);
     assert.equal(calls.length, 1); assert.equal(calls[0].opts.headers.Authorization, undefined);
+  });
+});
+test('inspection writes are local, authenticated, bounded to metadata routes',async()=>{
+  const calls=[];
+  await run(async(url,opts)=>{calls.push({url:String(url),opts});return Response.json({uuid:'campaign'});},async request=>{
+    await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com',token:'remote-token'});
+    assert.equal((await request('/gateway/rest/api/v1/environments/env/inspection-campaigns','POST',{external_id:'demo'})).status,405);
+    await request('/gateway/connection','POST',{baseUrl:'http://localhost:8000'});
+    assert.equal((await request('/gateway/rest/api/v1/environments/env/inspection-campaigns','POST',{external_id:'demo'})).status,200);
+    assert.equal((await request('/gateway/rest/api/v1/twins/twin/missions/mission/execute','POST',{})).status,405);
+    assert.equal((await request('/gateway/rest/api/v1/environments/env/inspection-campaigns','DELETE')).status,405);
+    assert.equal(calls.length,1); assert.equal(calls[0].opts.method,'POST'); assert.equal(calls[0].opts.headers.Authorization,'Bearer local-only-secret');
+    assert.deepEqual(JSON.parse(calls[0].opts.body),{external_id:'demo'});
   });
 });
 test('reconnect invalidates the previous session and disconnect revokes it', async () => {
@@ -57,5 +70,35 @@ test('untrusted origins cannot establish, reuse or delete a connection', async (
     await request('/gateway/connection', 'POST', { baseUrl: 'https://api.cyberwave.com' });
     assert.equal((await request('/gateway/connection', 'DELETE', undefined, 'https://unrelated.example.com')).status, 403);
     assert.equal((await request('/gateway/connection')).status, 200);
+  });
+});
+test('recording materialization status survives the read-only gateway', async () => {
+  await run(async () => Response.json({detail:'Preparing media',playback_readiness:{}},{status:202}),async request=>{
+    await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com'});
+    assert.equal((await request('/gateway/rest/api/v1/environments/env/recordings/recording/data')).status,202);
+    assert.equal((await request('/gateway/rest/api/v1/twins/twin/missions/mission/execute')).status,403);
+  });
+});
+test('only returned camera URLs are registered; nested unrelated metadata stays denied',async()=>{
+  const url='https://storage.example.com/camera.mp4?signature=temporary';
+  await run(async()=>Response.json({items:{twin_data:{camera:{camera:{signed_url:url}}}},metadata:{signed_url:'https://unrelated.example.com/private'}}),async request=>{
+    await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com'});
+    await request('/gateway/rest/api/v1/environments/env/recordings/id/data');
+    assert.equal((await request('/gateway/media?url='+encodeURIComponent(url))).status,200);
+    assert.equal((await request('/gateway/media?url='+encodeURIComponent('https://unrelated.example.com/private'))).status,403);
+  });
+});
+
+test('video byte ranges preserve 206 and never forward API credentials',async()=>{
+  const resource='https://storage.example.com/movie.mp4';
+  await run(async(url,opts)=>{
+    if(String(url).includes('/api/v1/'))return Response.json({items:{twin_data:{robot:{camera:{signed_url:resource}}}}});
+    assert.deepEqual(opts.headers,{Range:'bytes=0-3'});
+    return new Response('test',{status:206,headers:{'Content-Type':'video/mp4','Content-Range':'bytes 0-3/100','Content-Length':'4','Accept-Ranges':'bytes'}});
+  },async request=>{
+    await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com',token:'api-secret'});
+    await request('/gateway/rest/api/v1/environments/env/recordings/active_recording/data');
+    const response=await request('/gateway/media?url='+encodeURIComponent(resource),'GET',undefined,'http://127.0.0.1:5173',{Range:'bytes=0-3'});
+    assert.equal(response.status,206);assert.equal(response.headers.get('content-range'),'bytes 0-3/100');assert.equal(await response.text(),'test');
   });
 });
