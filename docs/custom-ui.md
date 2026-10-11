@@ -8,17 +8,19 @@ Start with an application-owned session and one `createCyberwave` client per API
 
 | Need | Reuse | Runnable example |
 | --- | --- | --- |
+| Map assets and drill into activities | `LocationMap`, `ActivityResults`, `MeasurementCard`, `EvidencePreview` | [18 · Asset operations](http://127.0.0.1:5173/asset-operations.html) |
+| Browse stored inspection history | `InspectionCampaignBrowser`, `useInspectionCampaign`, observation list/details | [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html) |
 | Browse environments and load real objects | `EnvironmentBrowser`, `loadEnvironment`, optional `@cyberwave/environment-3d` | [01 · Environments](http://127.0.0.1:5173/environments.html) |
 | Show a live or simulation camera | `twinSensors`, `connectVideo` or `VideoStream` | [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) |
 | Inspect stored samples from one sensor | `twins.telemetry`, `useSensorTelemetry`, `SensorTelemetryPanel` | [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) |
 | Receive sensor packets immediately | `subscribeSensorTelemetry` with a host-owned subscription transport | Live integration snippet in example 17 |
-| Review an existing recording | `RecordingBrowser`, `useRecordingPlayback`, `RecordingVideo` | [10 · Recording review](http://127.0.0.1:5173/recording-review.html) |
+| Review an existing recording | `RecordingBrowser`, `RecordingPlaybackPanel` (or the playback hook/player) | [10 · Recording review](http://127.0.0.1:5173/recording-review.html) |
 | Capture and annotate evidence | `captureVideoFrame`, `ImageAnnotationEditor`, backend ML task schemas, `datasets` | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) |
 | Plan and monitor work | `WorkflowCatalog`, `WorkflowPlanner`, `WorkflowMonitor` | [11 · Workflows & schedules](http://127.0.0.1:5173/mission-library.html) |
 | Request human input and resume a run | Existing human-action endpoints and dataset samples | [14 · Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) |
 | Send operator intent | Existing controller policy and backend validation | [07 · Keyboard telecontrol](http://127.0.0.1:5173/keyboard-telecontrol.html) |
 
-Local links need `pnpm server` and `pnpm dev`. All 17 examples share the API header and a grouped dropdown. The header defaults to `https://api.cyberwave.com`; custom HTTPS APIs and local HTTP APIs are supported. Video negotiation is a POST: the development BFF permits it only for authenticated local APIs. Other API operations and controller targets retain their existing restrictions.
+Local links need `pnpm server` and `pnpm dev`. All 19 examples share the API header and a grouped dropdown. The header defaults to `https://api.cyberwave.com`; custom HTTPS APIs and local HTTP APIs are supported. Video negotiation is a POST: the development BFF permits it only for authenticated local APIs. Other API operations and controller targets retain their existing restrictions.
 
 ## Authentication and application boundaries
 
@@ -243,3 +245,7 @@ source + stream instance**. Use the returned simulation run ID, not `default`.
 Check the SFU health endpoint, broker prefix, advertised ICE address and camera
 producer logs before retrying a failed viewer. Starting/stopping simulation and
 commanding joints remain separate authorized application actions.
+
+## Map assets, activities and inspection evidence
+
+Follow the [GIS operations integration guide](gis-operations.md) for optional Cesium setup, controlled selections, source measurements, missing evidence, existing environment geo anchors and persistent inspection review. Examples 18 and 19 compose the same components used in maintenance and recording review. Display types do not introduce new backend records. The guide distinguishes site locations from finding positions and normal workflow outputs from persistent defects.

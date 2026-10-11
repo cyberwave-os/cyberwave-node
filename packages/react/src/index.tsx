@@ -97,3 +97,6 @@ export { InspectionVerificationPanel } from './inspection-verification.js';
 
 export { SensorTelemetryPanel, useSensorTelemetry } from './sensor-telemetry.js';
 export { SensorSelector, LiveSensorTelemetryPanel, useLiveSensorTelemetry } from './sensor-controls.js';
+export { ActivityResults, MeasurementCard, EvidencePreview, type ActivityResult } from './activity-results.js';
+export { InspectionCampaignBrowser, useInspectionCampaign, InspectionObservationList, InspectionObservationDetails, type InspectionObservation } from './inspection-browser.js';
+export { RecordingPlaybackPanel } from './recording-playback.js';

@@ -220,3 +220,5 @@ export type CyberwaveClient = ReturnType<typeof createCyberwave>;
 export type StructuredActionCatalog = import('./generated/extensions.js').components['schemas']['StructuredActionCatalogSchema'];
 export type StructuredImageAction = StructuredActionCatalog['actions'][number];
 export type ImageAnnotationContract = NonNullable<StructuredImageAction['image_annotation']>;
+
+export { environmentMapLocation, validMapLocation, type MapLocation } from './geography.js';

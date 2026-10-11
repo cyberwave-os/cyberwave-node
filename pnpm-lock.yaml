@@ -96,6 +96,9 @@ importers:
       '@types/react':
         specifier: ^19.0.0
         version: 19.3.0
+      cesium:
+        specifier: 1.146.0
+        version: 1.146.0
       react:
         specifier: 19.2.0
         version: 19.2.0

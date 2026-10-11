@@ -1,6 +1,6 @@
 # Cyberwave JavaScript SDK
 
-Build a customer-specific application with the [custom UI integration guide](docs/custom-ui.md): session ownership, sensor discovery, video, telemetry, recordings, evidence, styling and independent command controls. Dedicated examples: [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) and [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html). These preview APIs require the matching backend branch.
+Build a customer-specific application with the [custom UI integration guide](docs/custom-ui.md): session ownership, sensor discovery, video, telemetry, recordings, evidence, styling and independent command controls. Dedicated examples: [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) and [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html). These preview APIs require the matching backend branch. For map → asset → activity → evidence, see the [GIS operations guide](docs/gis-operations.md), [18 · Asset operations](http://127.0.0.1:5173/asset-operations.html) and [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html).
 
 ## Planning with workflows
 
@@ -72,7 +72,7 @@ pnpm server
 pnpm dev
 ```
 
-Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **seventeen examples**, including [Cesium GIS planning](http://127.0.0.1:5173/), [mission simulation](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), [camera monitoring](http://127.0.0.1:5173/twin-monitor.html), and [human actions & reviewed evidence](http://127.0.0.1:5173/human-evidence.html).
+Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **nineteen examples**, including [Cesium GIS planning](http://127.0.0.1:5173/), [mission simulation](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), [camera monitoring](http://127.0.0.1:5173/twin-monitor.html), and [human actions & reviewed evidence](http://127.0.0.1:5173/human-evidence.html).
 
 New workbenches: [aerial inspection planning](http://127.0.0.1:5173/aerial-inspection.html), [campaign and evidence review](http://127.0.0.1:5173/inspection-workbench.html), and [recording catalog/playback](http://127.0.0.1:5173/recording-review.html).
 

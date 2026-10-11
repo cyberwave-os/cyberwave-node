@@ -3,6 +3,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   build: { rolldownOptions: { input: {
+    assetOperations: 'asset-operations.html', inspectionAtlas: 'inspection-atlas.html',
     sensorVideo: 'sensor-video.html', sensorTelemetry: 'sensor-telemetry.html',
     maintenance: 'maintenance-planning.html', verification: 'maintenance-verification.html',
     library: 'mission-library.html',

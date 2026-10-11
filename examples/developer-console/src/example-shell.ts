@@ -1,6 +1,7 @@
 import "./example-shell.css";
 import { mountHeaderConnection } from "./header-connection.tsx";
 const groups = [
+  { name: "Asset operations & GIS", items: [["/asset-operations.html", "18 · Asset operations map"], ["/inspection-atlas.html", "19 · Inspection atlas"]] },
   { name: "Video & telemetry", items: [["/sensor-video.html", "16 · Sensor video"], ["/sensor-telemetry.html", "17 · Sensor telemetry"]] },
   { name: "Human review & training", items: [["/human-evidence.html", "14 · Human actions & evidence"], ["/image-annotation.html", "15 · Capture & annotation"]] },
   {

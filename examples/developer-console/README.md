@@ -1,6 +1,6 @@
 # Cyberwave developer console
 
-Fifteen examples share the official `cyberwave` client, optional React/3D packages and a Cyberwave-style header. Start them from the [SDK repository root](../../README.md), after `pnpm build`, with `pnpm server` and `pnpm dev`.
+Nineteen examples share the official `cyberwave` client, optional React/3D packages and a Cyberwave-style header. Start them from the [SDK repository root](../../README.md), after `pnpm build`, with `pnpm server` and `pnpm dev`.
 
 | Type | Example | Integration |
 | --- | --- | --- |
@@ -21,10 +21,12 @@ Fifteen examples share the official `cyberwave` client, optional React/3D packag
 | Human review & training | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) | Camera/video frames, boxes, polygons and backend ML tasks. |
 | Video & telemetry | [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) | Backend sensor catalog, live/simulation source selection, receive-only WebRTC and frame capture. |
 | Video & telemetry | [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) | Exact sensor history, fixed time windows, pagination and a live-subscription integration snippet. |
+| Asset operations & GIS | [18 · Asset operations](http://127.0.0.1:5173/asset-operations.html) | Synthetic asset map, activity history, pressure/thermal results, evidence and pending repair verification. |
+| Asset operations & GIS | [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html) | Real API environments, existing geo anchors, campaigns, observations, revisions and supporting recordings. |
 
 ## Production, local and custom connections
 
-Open **API** in the header to select production, localhost or a custom origin. The same `ConnectionPanel` serves all seventeen examples; page-level duplicates have been removed. Changing connection reloads the example and clears drafts, selections, models and previews. Export drafts first. Navigation between examples restores the gateway session. **Reset to public** replaces it with an anonymous production session. The page and header share one initialization request so a first visit cannot race two cookie sessions.
+Open **API** in the header to select production, localhost or a custom origin. The same `ConnectionPanel` serves all nineteen examples; page-level duplicates have been removed. Changing connection reloads the example and clears drafts, selections, models and previews. Export drafts first. Navigation between examples restores the gateway session. **Reset to public** replaces it with an anonymous production session. The page and header share one initialization request so a first visit cannot race two cookie sessions.
 
 The shared API header on every example defaults to `https://api.cyberwave.com`. Connect anonymously for public assets; enter a Cyberwave API token for private environments. Use `http://localhost:8000` or any custom HTTPS API origin for integration testing. Changing origins clears the scene and requires a new credential choice. Tokens stay in the local gateway's memory; storage/model-resource downloads never receive them.
 
@@ -64,7 +66,7 @@ DEMO_MQTT_ENVIRONMENT_PREFIX=local
 
 The assigned policy must declare `execution_contract: locomotion.velocity_command.v1`, `runtime_kind: simulation`, `physical_enabled: false`, finite positive `max_linear_x` / `max_angular_z`, and `max_linear_y` when lateral motion is supported. The example caps input at 0.5 m/s and 0.8 rad/s. It rejects physical policies, arbitrary browser-selected targets/topics, and changing policy revisions. `preview` transport also supports connected data without broker publishing.
 
-The server compiles allowed key codes into the existing packet used by [the simulation controller scenario](../../cyberwave-cloud-nodes/tests/sim-scenarios/drive_during_mapping.py): `source_type: sim_tele`, `command: locomotion_velocity`, and `data.contract: locomotion.velocity_command.v1`. It publishes to `localcyberwave/twin/{uuid}/command` with 300 ms duration, QoS 0, retain false, no reconnect/replay queue. It subscribes to its exact topic, consumes only its own session-tagged packets, and drives a separate reference pose from actual broker echoes. Delivery/echo is not acknowledgment of physical execution.
+The server compiles allowed key codes into the existing packet accepted by the simulation controller: `source_type: sim_tele`, `command: locomotion_velocity`, and `data.contract: locomotion.velocity_command.v1`. It publishes to `localcyberwave/twin/{uuid}/command` with 300 ms duration, QoS 0, retain false, no reconnect/replay queue. It subscribes to its exact topic, consumes only its own session-tagged packets, and drives a separate reference pose from actual broker echoes. Delivery/echo is not acknowledgment of physical execution.
 
 Server-held MQTT credentials default to the API token with the `cwh_<SHA256(token)>` broker identity supported by current `dev`. Older local brokers may require explicit `DEMO_MQTT_USERNAME` and `DEMO_MQTT_PASSWORD`. They never enter browser bundles. [MQTT.js transport options](https://github.com/mqttjs/MQTT.js).
 
@@ -196,3 +198,7 @@ is receive-only: selecting Simulation does not launch a workload. Capture and
 PNG download operate on decoded browser frames. See the
 [composition guide](../../docs/custom-ui.md#compose-a-camera-console-and-a-live-sensor-panel)
 for custom capture/annotation flows and application-owned MQTT adapters.
+
+## GIS journeys and activity results
+
+Example 18 is fully synthetic and can be explored without private API access. Search a site or industry, select a Cesium marker, choose an inspection/intervention, filter results and export JSON. OpenStreetMap is enabled explicitly and can be replaced with the local grid. Example 19 reads actual environment/campaign/recording catalogs from the shared connection; absent geo anchors and media remain explicit. No map click starts work. See [GIS components and integration](../../docs/gis-operations.md) for composition, coordinate contracts, authorized media resolution and source-of-truth boundaries. The maintenance campaign picker and recording-review page now reuse these same components.

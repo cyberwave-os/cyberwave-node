@@ -204,3 +204,70 @@ test('frame review replaces and releases previews, and cannot submit an undecode
     assert.deepEqual(revoked, ['blob:frame-1', 'blob:frame-2']);
   } finally { URL.createObjectURL = previous.create; URL.revokeObjectURL = previous.revoke; }
 });
+
+test('inspection browser resets pagination and never shows another API client campaign rows', async () => {
+  const { InspectionCampaignBrowser } = await import('@cyberwave/react');
+  const requests: URL[]=[];
+  const first=createCyberwave({fetch:async()=>Response.json(Array.from({length:10},(_,i)=>({uuid:`old-${i}`,name:`Old campaign ${i}`,asset_reference:'asset',coverage:null})))});
+  const second=createCyberwave({fetch:async request=>{requests.push(new URL((request as Request).url));return Response.json([]);}});
+  await mounted(async({render,click,element})=>{
+    const view=(client:typeof first)=>h(CyberwaveProvider,{client,children:h(InspectionCampaignBrowser,{environmentId:'environment',onSelect(){}})});
+    await render(view(first));await click('Next campaigns');await render(view(second));
+    assert.equal(requests[0].searchParams.get('offset'),'0');assert.doesNotMatch(element.textContent!,/Old campaign/);
+  });
+});
+test('inspection detail ignores a late campaign response after selection changes', async()=>{
+ const {useInspectionCampaign}=await import('@cyberwave/react');
+ let finish: (response:Response)=>void=()=>{};
+ const client=createCyberwave({fetch:async request=>(request as Request).url.endsWith('/old')?new Promise<Response>(resolve=>{finish=resolve;}):Response.json({uuid:'current',name:'Current campaign',observations:[]})});
+ function Detail({id}:{id:string}){const state=useInspectionCampaign('env',id);return h('div',null,state.data?.name||'Loading');}
+ await mounted(async({render,element})=>{
+ const view=(id:string)=>h(CyberwaveProvider,{client,children:h(Detail,{id})});
+ await render(view('old'));await render(view('current'));await act(async()=>finish(Response.json({uuid:'old',name:'Obsolete campaign'})));
+ assert.match(element.textContent!,/Current campaign/);assert.doesNotMatch(element.textContent!,/Obsolete/);
+ });
+});
+test('activity details preserve zero, missing units and unavailable evidence without inventing a reading',async()=>{
+ const {MeasurementCard,EvidencePreview}=await import('@cyberwave/react');
+ await mounted(async({render,element})=>{
+ await render(h(MeasurementCard,{result:{id:'x',title:'Reading',outcome:'normal',value:0}}));assert.match(element.textContent!,/0 unit not supplied/);
+ await render(h(MeasurementCard,{result:{id:'x',title:'Reading',outcome:'unavailable',value:88,unit:'bar'}}));assert.doesNotMatch(element.textContent!,/88 bar/);assert.match(element.textContent!,/No measured value/);
+ await render(h(EvidencePreview,{src:'javascript:alert(1)',caption:'Inspection'}));assert.equal(element.querySelector('img'),null);assert.match(element.textContent!,/Evidence is unavailable/);
+ });
+});
+test('latest review is chosen by revision and absent coverage is never rendered as resolution',async()=>{
+ const {InspectionObservationDetails}=await import('@cyberwave/react');
+ const base={uuid:'o',campaign_uuid:'c',defect_uuid:'d',source:{external_id:'o',defect_external_id:'d',kind:'Crack',observed:false,limitation:'No coverage'},reviews:[]} as any;
+ await mounted(async({render,element})=>{
+ await render(h(InspectionObservationDetails,{observation:base}));assert.match(element.textContent!,/coverage unconfirmed/);assert.doesNotMatch(element.textContent!,/resolved/);
+ const review=(revision:number,technical_state:string)=>({uuid:`r${revision}`,revision,assessment:{decision:'validated',technical_state,severity:'low',priority:'routine'},reason:'Reviewed',created_at:'2026-10-11',created_by_uuid:'reviewer'});
+ await render(h(InspectionObservationDetails,{observation:{...base,reviews:[review(2,'stable'),review(1,'new')]}}));
+ assert.equal(element.querySelector('dd')?.textContent,'stable');
+ });
+});
+
+
+test('recording panel refreshes materialized sources and drops previous media on retarget', async () => {
+  const { RecordingPlaybackPanel } = await import('@cyberwave/react');
+  let pending = true;
+  const start = 1_780_000_000_000_000;
+  const client = createCyberwave({ fetch: async request => {
+    if ((request as Request).url.includes('/other/')) return new Promise<Response>(() => {});
+    return pending
+      ? Response.json({ detail: 'Preparing media', retry_after_seconds: 5 }, { status: 202 })
+      : Response.json({ items: { twin_data: { robot: { camera: { format: 'mp4', signed_url: 'https://media.example.com/video.mp4', first_timestamp_us: start, last_timestamp_us: start + 1e6 } } }, twin_uuids: ['robot'], is_combined: false, start_timestamp_us: start, end_timestamp_us: start + 1e6 } });
+  } });
+  const recording = { uuid: 'recording', metadata: { session_name_defined_by_user: 'A recording' } } as any;
+  const resolveUrl = () => '/authorized-media';
+  const view = (environmentUuid: string) => h(CyberwaveProvider, { client, children: h(RecordingPlaybackPanel, { environmentUuid, recording, resolveUrl }) });
+  await mounted(async ({ render, element, click }) => {
+    await render(view('env'));
+    assert.match(element.textContent!, /Preparing media/);
+    assert.equal(element.querySelector('video'), null);
+    pending = false; await click('Refresh playback sources');
+    assert.equal(element.querySelector('video')?.getAttribute('src'), '/authorized-media');
+    await render(view('other'));
+    assert.equal(element.querySelector('video'), null, 'Previous environment media is detached immediately');
+    assert.match(element.textContent!, /Loading playback/);
+  });
+});
