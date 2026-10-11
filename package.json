@@ -8,6 +8,7 @@
   },
   "scripts": {
     "generate": "node scripts/generate.mjs",
+    "ci:check": "pnpm generate && git diff --exit-code -- src/generated schema && pnpm build && pnpm test && pnpm pack:check",
     "build": "pnpm examples:check && pnpm build:sdk && pnpm --filter @cyberwave/environment-3d build && pnpm --filter @cyberwave/react build && pnpm --filter cyberwave-developer-console build",
     "test": "node --test tests/*.test.ts && pnpm --filter cyberwave-developer-console test",
     "dev": "pnpm --filter cyberwave-developer-console dev",

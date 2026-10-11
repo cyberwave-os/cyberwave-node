@@ -1,6 +1,6 @@
-import { mkdtemp, readdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -16,4 +16,10 @@ await writeFile(join(directory, 'consumer.ts'), `import { createCyberwave, subsc
 execFileSync(join(directory, 'node_modules/.bin/tsc'), ['--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', 'consumer.ts'], { cwd: directory, stdio: 'pipe' });
 execFileSync(process.execPath, ['--input-type=module', '-e', "import { createCyberwave } from 'cyberwave'; import { connectVideo } from 'cyberwave/video'; import { VideoStream, SensorVideoPanel } from '@cyberwave/react/video'; import { LiveSensorTelemetryPanel, SensorSelector, EnvironmentBrowser, WorkflowCatalog, WorkflowPlanner, WorkflowMonitor, InspectionVerificationPanel } from '@cyberwave/react'; import { ImageModelTaskControls, CapturedFrameReview, ImageAnnotationEditor, ImageCapture, ModelResultOverlay } from '@cyberwave/react/annotation'; import { createEnvironmentViewer } from '@cyberwave/environment-3d'; if (!ImageModelTaskControls || !CapturedFrameReview || !SensorVideoPanel || !LiveSensorTelemetryPanel || !SensorSelector || !connectVideo || !VideoStream || !ImageAnnotationEditor || !ImageCapture || !ModelResultOverlay || !createCyberwave().rest || !EnvironmentBrowser || !WorkflowCatalog || !WorkflowPlanner || !WorkflowMonitor || !InspectionVerificationPanel || !createEnvironmentViewer) process.exit(1);"], { cwd: directory, stdio: 'pipe' });
 console.log('All three published tarballs install, typecheck and import outside the workspace.');
+// CI publishes these exact, consumer-tested archives, not a second pack.
+if (process.env.CYBERWAVE_PACK_DEST) {
+  const destination = resolve(process.env.CYBERWAVE_PACK_DEST);
+  await mkdir(destination, { recursive: true });
+  for (const file of packages) await copyFile(file, join(destination, basename(file)));
+}
 console.log(`Tarballs: ${directory}`);

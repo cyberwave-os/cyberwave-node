@@ -4,11 +4,19 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 const schema = new URL('../schema/openapi.json', import.meta.url);
 const extensions = new URL('../schema/extensions.openapi.json', import.meta.url);
+const schemaSource = process.argv.find(arg => arg.startsWith('--schema-from='))?.slice('--schema-from='.length);
+if (schemaSource && process.argv.includes('--refresh')) throw new Error('Choose --schema-from or --refresh, not both');
+const validateSchema = value => {
+  if (!value || !/^3\./.test(value.openapi) || !value.paths || !value.components?.schemas) throw new Error('Expected an OpenAPI 3 document with paths and component schemas');
+  return value;
+};
+const localSchema = schemaSource ? validateSchema(JSON.parse(await readFile(schemaSource, 'utf8'))) : undefined;
 // Development additions and selected path overrides stay separate from the pinned production API.
 // Export from the backend's /api/v1/openapi.json; never hand-edit generated types.
-const extensionSource = process.argv.find(arg => arg.startsWith('--extensions-from='))?.split('=').slice(1).join('=');
-if (extensionSource) {
-  const full = JSON.parse(await readFile(extensionSource, 'utf8'));
+const extensionSource = process.argv.find(arg => arg.startsWith('--extensions-from='))?.slice('--extensions-from='.length);
+if (extensionSource && schemaSource && extensionSource !== schemaSource) throw new Error('Use the same backend document for both contracts');
+if (extensionSource || localSchema) {
+  const full = localSchema ?? validateSchema(JSON.parse(await readFile(extensionSource, 'utf8')));
   const paths = Object.fromEntries(Object.entries(full.paths).filter(([path]) => /\/environments\/\{uuid\}\/(inspection-|missions$)/.test(path) || /\/workspaces\/\{workspace_uuid\}\/missions$/.test(path) || /\/workflows(?:$|\/\{uuid\}\/(?:input-contract|executions)$)/.test(path) || /\/workflow-actions(?:$|\/\{uuid\}(?:$|\/respond$))/.test(path) || /\/mlmodels\/structured-actions$/.test(path) || /\/twins\/\{uuid\}\/(?:telemetry$|video-sessions(?:$|\/\{session_id\}\/close$))/.test(path) || /\/datasets\/(?:collections$|\{uuid\}\/samples(?:$|\/\{sample_uuid\}\/review$))/.test(path)));
   if (Object.keys(paths).length !== 19) throw new Error('Expected inspection, workflow, human action, dataset sample and sensor contracts');
   const schemas = {}, queue = [paths];
@@ -23,12 +31,12 @@ if (extensionSource) {
   }
   await writeFile(extensions, JSON.stringify({openapi:full.openapi,info:{title:'Cyberwave development extensions',version:'0.1.0-preview',description:'Development endpoints and workflow pagination overrides; deployment availability must be checked separately.'},paths,components:{schemas,securitySchemes:full.components.securitySchemes}},null,2)+'\n');
 }
+if (localSchema) await writeFile(schema, JSON.stringify(localSchema, null, 2) + '\n');
 if (process.argv.includes('--refresh')) {
   const origin = process.env.CYBERWAVE_API_URL || 'https://api.cyberwave.com';
   const response = await fetch(new URL('/api/v1/openapi.json', origin), { signal: AbortSignal.timeout(30000), redirect: 'error' });
   if (!response.ok) throw new Error(`Schema download failed (${response.status})`);
-  const json = await response.json();
-  if (!json.openapi || !json.paths) throw new Error('Not an OpenAPI document');
+  const json = validateSchema(await response.json());
   await writeFile(schema, JSON.stringify(json, null, 2) + '\n');
 }
 const bytes = await readFile(schema);

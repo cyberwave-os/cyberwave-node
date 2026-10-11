@@ -103,9 +103,9 @@ pnpm test
 pnpm pack:check          # install all tarballs outside the workspace; verify imports/types
 ```
 
-The pinned [OpenAPI TypeScript generator](https://openapi-ts.dev/) generates `src/generated/schema.ts` from the public API snapshot in `schema/openapi.json`. `schema/sha256.txt` records its digest. Never hand-edit generated types. Keep ergonomic client/UI code separate so regeneration cannot overwrite it. CI checks regeneration, builds, tests, and standalone packaging. `pnpm examples:check` also verifies that all HTML entries, composition roots, navigation and the generated guide agree; after editing the shared example catalog, run `pnpm examples:write`. Networked API/model checks are explicit development validation, not a CI dependency.
+The pinned [OpenAPI TypeScript generator](https://openapi-ts.dev/) generates `src/generated/schema.ts` from the public API snapshot in `schema/openapi.json`. `schema/sha256.txt` records its digest. Never hand-edit generated types. Keep ergonomic client/UI code separate so regeneration cannot overwrite it. Standalone CI checks regeneration, builds, tests, and packaging; backend CI also regenerates against its checked-out local API. `pnpm examples:check` verifies that all HTML entries, composition roots, navigation and the generated guide agree; after editing the shared example catalog, run `pnpm examples:write`. Production API/model checks remain explicit development validation, not a CI dependency.
 
-The package remains ESM, uses the platform Fetch API, and publishes compiled JavaScript plus declarations. No npm publish is performed by CI in this increment. The initial follow-up should establish trusted npm publishing and versioning for the three packages together.
+The package remains ESM, uses the platform Fetch API, and publishes compiled JavaScript plus declarations. The [CI and release guide](docs/releases.md) covers local validation, API regeneration and tag-triggered npm publishing for all three packages. Publishing requires npm trusted-publisher configuration; branch pushes and PRs run validation only.
 
 
 ## Planning with workflows
