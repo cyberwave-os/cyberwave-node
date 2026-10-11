@@ -271,6 +271,8 @@
             "name": "offset",
             "schema": {
               "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
               "title": "Offset",
               "type": "integer"
             },
@@ -281,6 +283,8 @@
             "name": "limit",
             "schema": {
               "default": 50,
+              "maximum": 100,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             },
@@ -846,6 +850,8 @@
             "name": "limit",
             "schema": {
               "default": 50,
+              "maximum": 100,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             },
