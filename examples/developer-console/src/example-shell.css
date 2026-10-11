@@ -219,3 +219,33 @@
     max-width: 230px;
   }
 }
+
+.example-guide {
+  font: 12px/1.6 system-ui, sans-serif;
+  color: var(--cw-muted);
+  background: #19212a;
+  border-bottom: 1px solid var(--cw-border);
+  padding: 9px 28px;
+}
+.example-guide summary {
+  cursor: pointer;
+  color: var(--cw-text);
+}
+.example-guide summary:focus-visible {
+  outline: 2px solid var(--cw-primary);
+  outline-offset: 3px;
+}
+.example-guide > div {
+  max-width: 1050px;
+  padding: 6px 0 12px;
+}
+.example-guide p { margin: 8px 0; }
+.example-guide strong { color: var(--cw-text); }
+.example-guide a {
+  display: inline-block;
+  margin-right: 20px;
+  color: #77c9ec;
+}
+@media (max-width: 850px) {
+  .example-guide { padding-inline: 18px; }
+}

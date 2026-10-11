@@ -13,7 +13,7 @@ Start with an application-owned session and one `createCyberwave` client per API
 | Browse environments and load real objects | `EnvironmentBrowser`, `loadEnvironment`, optional `@cyberwave/environment-3d` | [01 · Environments](http://127.0.0.1:5173/environments.html) |
 | Show a live or simulation camera | `twinSensors`, `connectVideo` or `VideoStream` | [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) |
 | Inspect stored samples from one sensor | `twins.telemetry`, `useSensorTelemetry`, `SensorTelemetryPanel` | [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) |
-| Receive sensor packets immediately | `subscribeSensorTelemetry` with a host-owned subscription transport | Live integration snippet in example 17 |
+| Receive sensor packets immediately | `subscribeSensorTelemetry` with a host-owned subscription transport | Live panel in [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) |
 | Review an existing recording | `RecordingBrowser`, `RecordingPlaybackPanel` (or the playback hook/player) | [10 · Recording review](http://127.0.0.1:5173/recording-review.html) |
 | Capture and annotate evidence | `captureVideoFrame`, `ImageAnnotationEditor`, backend ML task schemas, `datasets` | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) |
 | Plan and monitor work | `WorkflowCatalog`, `WorkflowPlanner`, `WorkflowMonitor` | [11 · Workflows & schedules](http://127.0.0.1:5173/mission-library.html) |
@@ -123,7 +123,7 @@ const stop = await subscribeSensorTelemetry(transport, {
 
 The transport implements `subscribe(topic, onMessage): Promise<unsubscribe>`. Your host owns the broker WebSocket URL, authentication, reconnection and decoding. Resolve only after successful subscription acknowledgment, reject denied subscriptions, bound payload sizes, decode JSON and remove only that listener when unsubscribing. If several views share a broker topic, reference-count its broker subscription so closing one view does not unsubscribe the others. Do not forward API tokens to arbitrary brokers selected by page input.
 
-The helper uses an exact topic, rejects wildcard channels and emits only object packets carrying the selected top-level `sensor_id`. It does not parse binary packets or attribute unlabeled packets to a sensor. Prefix `local` means `localcyberwave/twin/...`; production uses no prefix. Channels such as `imu`, `gps` or `telemetry` depend on the producer: sensor type alone is not a channel-discovery API. `receivedAt` is browser arrival time in milliseconds, not calibrated capture time. Bound buffers and throttle chart rendering in your application. Live subscription does not cause persistence.
+The helper uses an exact topic, rejects wildcard channels and emits only object packets with a matching `sensor_id`, `sensor` alias, or `data.sensor_id` on `depth_data` packets. Conflicting identities are rejected. It does not parse binary packets or attribute unlabeled packets to a sensor. Prefix `local` means `localcyberwave/twin/...`; production uses no prefix. Channels such as `imu`, `gps` or `telemetry` depend on the producer: sensor type alone is not a channel-discovery API. `receivedAt` is browser arrival time in milliseconds, not calibrated capture time. Bound buffers and throttle chart rendering in your application. Live subscription does not cause persistence.
 
 ## Recordings, capture and evidence
 
@@ -249,3 +249,8 @@ commanding joints remain separate authorized application actions.
 ## Map assets, activities and inspection evidence
 
 Follow the [GIS operations integration guide](gis-operations.md) for optional Cesium setup, controlled selections, source measurements, missing evidence, existing environment geo anchors and persistent inspection review. Examples 18 and 19 compose the same components used in maintenance and recording review. Display types do not introduce new backend records. The guide distinguishes site locations from finding positions and normal workflow outputs from persistent defects.
+
+
+## Component reference and complete composition
+
+Use the [React component reference](../packages/react/README.md) for entry points, required provider/client props and ownership boundaries. The [typed camera → capture → review recipe](../examples/developer-console/src/recipes/camera-review.tsx) includes imports, session-scoped state and original capture provenance. It is checked by the examples build. The [component roadmap](component-opportunities.md) distinguishes available pieces from proposed extractions for sample browsing, human actions and inspection comparison.

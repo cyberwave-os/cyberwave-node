@@ -2,27 +2,38 @@
 
 Nineteen examples share the official `cyberwave` client, optional React/3D packages and a Cyberwave-style header. Start them from the [SDK repository root](../../README.md), after `pnpm build`, with `pnpm server` and `pnpm dev`.
 
-| Type | Example | Integration |
-| --- | --- | --- |
-| SDK components | [01 · Environment explorer](http://127.0.0.1:5173/environments.html) | Custom API origin, authentication, environment browser, metadata/twin/asset loading, real GLB/URDF scene. |
-| SDK components | [02 · Asset studio](http://127.0.0.1:5173/asset-catalog.html) | Production catalog, search/pagination, real model preview and isolated kinematic motion. |
-| Visualization | [03 · Cesium GIS](http://127.0.0.1:5173/) | Local/ENU mapping, waypoints, immutable mission drafts and explicit dispatch. |
-| Visualization | [04 · Twin & camera monitor](http://127.0.0.1:5173/twin-monitor.html) | Observation and authenticated latest-frame snapshots. |
-| Simulation | [05 · Mission timeline](http://127.0.0.1:5173/mission-simulation.html) | Deterministic play/pause/seek/reset without changing observed data. |
-| Simulation | [06 · Robot runtime modes](http://127.0.0.1:5173/robot-environment.html) | Actual Go2 model, controller preview / local observation switching, optional MuJoCo lifecycle. |
-| Command & control | [07 · Keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html) | Space + WASD/QE to bounded velocity intent, with session ownership and expiry. |
-| Inspection & GIS | [08 · Aerial inspection](http://127.0.0.1:5173/aerial-inspection.html) | Survey objectives, aircraft constraints and Cesium preview. |
-| Inspection & GIS | [09 · Campaign review](http://127.0.0.1:5173/inspection-workbench.html) | Evidence, review revisions and stored campaigns. |
-| Inspection & GIS | [10 · Recording review](http://127.0.0.1:5173/recording-review.html) | Recording catalog, readiness and finalized playback. |
-| Planning & governance | [11 · Workflows & schedules](http://127.0.0.1:5173/mission-library.html) | Templates, configured targets, recurring timing and real run history. |
-| Maintenance | [12 · Maintenance planning](http://127.0.0.1:5173/maintenance-planning.html) | Preventive/corrective proposals, window checks, saved findings and workflow links. |
-| Maintenance | [13 · Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) | Duplicate updates, verification evidence and delivery coverage. |
-| Human review & training | [14 · Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) | Workflow actions, consent and reviewed image collections. |
-| Human review & training | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) | Camera/video frames, boxes, polygons and backend ML tasks. |
-| Video & telemetry | [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) | Backend sensor catalog, live/simulation source selection, receive-only WebRTC and frame capture. |
-| Video & telemetry | [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) | Exact sensor history, fixed time windows, pagination and a live-subscription integration snippet. |
-| Asset operations & GIS | [18 · Asset operations](http://127.0.0.1:5173/asset-operations.html) | Synthetic asset map, activity history, pressure/thermal results, evidence and pending repair verification. |
-| Asset operations & GIS | [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html) | Real API environments, existing geo anchors, campaigns, observations, revisions and supporting recordings. |
+## Choose a runnable path
+
+- **No private credentials:** start with 02 (public assets), 18 (synthetic operations), 08 (aerial draft), or 15 (local-image annotation).
+- **An authorized environment:** try 01 (3D), 10 (recordings) or 19 (stored inspections). Empty catalogs need actual stored resources; the UI does not seed them.
+- **An active sensor producer:** use 16 (video/capture) or 17 (live/history), with the matching local backend and media/broker configuration.
+- **Plan and review work:** use 11–15. Mutations require explicit actions and the authenticated local gateway.
+
+Every page has **About this example** below the header. It describes its data source, prerequisites, writes and reusable pieces. The command examples 03–07 use the server-configured target; the API header does not retarget those controls. The catalog below is generated from [the navigation source](src/example-catalog.ts); update it with `pnpm examples:write` at the repository root. The build checks for drift.
+
+<!-- example-catalog:start -->
+| Example / source | Data source | Before you start | Actions and persistence |
+| --- | --- | --- | --- |
+| [01 · Environment explorer](http://127.0.0.1:5173/environments.html) · [source](src/environment-browser.tsx) | API selected in the header | Authorized environment and accessible model resources. | Read-only environment/model loading; scene gestures do not issue commands. |
+| [02 · Real asset studio](http://127.0.0.1:5173/asset-catalog.html) · [source](src/environment-browser.tsx) | API selected in the header | Public catalog or authorized private assets; accessible model resources. | Read-only asset loading; joint motion is a local preview. |
+| [03 · Cesium GIS & navigation drafts](http://127.0.0.1:5173/) · [source](src/main.ts) | Server fixture or server-configured local target | Fixture mode works without credentials. Connected navigation requires explicit execution and geo-verification settings. | Local route draft; Start can dispatch navigation only when enabled on the server. Header API does not retarget commands. |
+| [04 · Twin & camera monitor](http://127.0.0.1:5173/twin-monitor.html) · [source](src/twin-monitor.ts) | Server fixture or server-configured local target | Fixture mode or a configured environment/twin; camera snapshots need an active source. | Read-only REST snapshots. This is not the WebRTC viewer. |
+| [05 · Route timeline · kinematic](http://127.0.0.1:5173/mission-simulation.html) · [source](src/mission-simulation.ts) | Server fixture or local API snapshot; local animation | Default fixture, or the server-configured environment. | Play/pause/seek a kinematic route; no backend run or command is created. |
+| [06 · Robot environment & runtime modes](http://127.0.0.1:5173/robot-environment.html) · [source](src/robot-environment.ts) | Catalog mesh; server-configured observations and controller | Fixture preview, or local environment/policy/MQTT. Physics start additionally requires a compatible simulation worker. | Explicit controller activation; optional bounded backend simulation start/owned stop. Live selection observes the configured twin. |
+| [07 · Keyboard controller input](http://127.0.0.1:5173/keyboard-telecontrol.html) · [source](src/keyboard-telecontrol.ts) | Server fixture or server-configured simulation controller | Fixture preview, or an assigned simulation-only velocity policy and local broker. | Activation + Space/WASD/QE produce bounded intent. Live actuation is not enabled by the API header. |
+| [08 · Aerial inspection planning](http://127.0.0.1:5173/aerial-inspection.html) · [source](src/aerial-inspection.tsx) | Synthetic survey; optional API workflow panel | No credentials for planning. Workflow panel needs the matching backend. | Survey export and kinematic preview; no flight upload. Embedded workflow controls are separate real actions. |
+| [09 · Campaign & evidence review](http://127.0.0.1:5173/inspection-workbench.html) · [source](src/inspection-workbench.tsx) | Synthetic comparison plus optional API persistence | Local walkthrough; authenticated local inspection API for imports/reviews. | Local review/export or explicit synthetic campaign import and stored review. Local video selection does not upload it. |
+| [10 · Recording catalog & playback](http://127.0.0.1:5173/recording-review.html) · [source](src/recording-review.tsx) | API selected in the header | Authorized environment and stored recordings; finalized MP4/known source clock for video. | Catalog/source reads and media playback; HTTP 202 means preparation, not a missing recording. |
+| [11 · Workflows & schedules](http://127.0.0.1:5173/mission-library.html) · [source](src/mission-library.tsx) | API selected in the header | Workspace/environment access; workflow templates and preview input-contract/pagination routes. | Local-backend draft/configuration, activation, recurring schedule, run and cancellation. |
+| [12 · Maintenance planning](http://127.0.0.1:5173/maintenance-planning.html) · [source](src/maintenance-planning.tsx) | Synthetic proposal plus API findings/workflows | Local proposal needs no private data. Stored findings/workflow planning need an authorized environment. | JSON export is local. The embedded planner can change/run workflows independently; no work order or reservation is submitted. |
+| [13 · Maintenance verification](http://127.0.0.1:5173/maintenance-verification.html) · [source](src/maintenance-verification.tsx) | Synthetic reconciliation plus API stored verification | Local walkthrough or stored baseline/follow-up evidence on the preview backend. | Local acceptance exercise; explicit stored review/import and workflow actions can write to the authenticated local API. |
+| [14 · Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) · [source](src/human-evidence.tsx) | API selected in the header | Preview human-action and dataset-sample routes; assigned action or a media-collection UUID. | Explicit consent/acknowledgement writes to authenticated local APIs. Photo upload uses the platform inbox; gallery shows its first 100 samples. |
+| [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) · [source](src/image-annotation.tsx) | Local image/camera or API dataset sample | Local image works without API credentials. Sample review and model assistance need the matching backend. | Local drawing/export; explicit local-backend review or model run. Inference may consume credits. Loads the first dataset sample. |
+| [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) · [source](src/sensor-video.tsx) | API selected in the header and an active camera producer | Authenticated local API, video routes, reachable SFU and exact twin/sensor/source/stream instance. | Explicit viewer negotiation and teardown; PNG/annotation exports stay local. Does not start a producer. |
+| [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) · [source](src/sensor-telemetry.tsx) | API history; optional local MQTT bridge | Stored sensor-tagged events for history. Live reads also need server-configured MQTT and the matching authenticated local API. | REST reads; explicit live subscribe/disconnect. Neither starts a producer nor persists packets. |
+| [18 · Asset operations map](http://127.0.0.1:5173/asset-operations.html) · [source](src/asset-operations.tsx) | Invented sites and activity results | No API credentials. Optional OpenStreetMap tiles need network access. | Local selection and JSON export only. |
+| [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html) · [source](src/inspection-atlas.tsx) | API selected in the header | Authorized environment; inspection endpoints and stored campaigns. A geo anchor is optional. | Read-only campaign/review/recording browsing; media references need a host resolver. |
+<!-- example-catalog:end -->
 
 ## Production, local and custom connections
 
@@ -88,7 +99,7 @@ The 3D page includes a separate simulation controller for today's `GET/POST /api
 
 Cyberwave's simulation start/stop also performs controller cleanup within that environment. Do not point this optional lifecycle example at a shared operational environment. Closing a viewer does not stop a backend workload; use Stop owned simulation or let its bounded lifetime complete. Request acceptance is distinct from worker assignment, readiness, completion, and stop confirmation. If the request outcome is unknown, inspect Cyberwave rather than automatically retrying. A BFF restart loses local ownership and requires inspecting the backend before managing the workload elsewhere.
 
-An available local simulation worker, compatible asset/model artifacts, and a separately prepared policy runtime are needed for actual physics-driven robot motion. These examples do not install a worker, download an ONNX model, or claim that the kinematic reference consumer runs MuJoCo. The current local deployment exposes simulation lifecycle endpoints but predates `control-profile/inputs/prepare`; full live input preparation is a follow-up capability, described in the root SDK README.
+An available local simulation worker, compatible asset/model artifacts, and a separately prepared policy runtime are needed for actual physics-driven robot motion. These examples do not install a worker, download an ONNX model, or claim that the kinematic reference consumer runs MuJoCo. Simulation lifecycle availability does not imply that controller preparation is supported. Check the target deployment and policy runtime before enabling input; this example does not prepare or authorize a live physical controller.
 
 ## Coordinate contract
 
@@ -96,7 +107,7 @@ Set `DEMO_LONGITUDE`, `DEMO_LATITUDE`, and `DEMO_ELLIPSOID_HEIGHT` to the WGS84 
 
 The default Rome anchor is fixture data, not a calibration. Cesium ellipsoid height is not robot navigation height or aircraft relative-to-takeoff altitude. This example supports local Cartesian navigation only. It does not change the backend localization/map anchor or skip environment-to-navigation conversion. Connected integrations must verify both transforms and reject stale map/localization revisions.
 
-The globe uses Cesium's generated grid imagery: no ion token, external tiles, or network terrain is required. Additional GIS layers belong in the renderer; their credentials/datums are separate from Cyberwave authorization. Configuration follows [Cesium's Vite guide](https://cesium.com/blog/2024/02/13/configuring-vite-or-webpack-for-cesiumjs/); coordinate conversion follows [Cesium Transforms](https://cesium.com/learn/cesiumjs/ref-doc/Transforms.html).
+The navigation and aerial-draft globes (03/08) use Cesium's generated grid imagery: no ion token, external tiles, or network terrain is required. The asset-operations map (18) explicitly enables OpenStreetMap; the connected atlas (19) defaults to a local grid. Additional GIS layers belong in the renderer; their credentials/datums are separate from Cyberwave authorization. Configuration follows [Cesium's Vite guide](https://cesium.com/blog/2024/02/13/configuring-vite-or-webpack-for-cesiumjs/); coordinate conversion follows [Cesium Transforms](https://cesium.com/learn/cesiumjs/ref-doc/Transforms.html).
 
 ## Module responsibilities
 
@@ -110,7 +121,7 @@ The globe uses Cesium's generated grid imagery: no ion token, external tiles, or
 | `src/keyboard-telecontrol.ts` | Reusable input UI controller and lifecycle, independent of 3D. |
 | `src/robot-view.ts` | Real URDF/GLB projection of supplied simulation/observed poses; no command imports. |
 | `src/robot-environment.ts` | Composition root for runtime modes, controller UI, observation, and physics lifecycle. |
-| `src/example-shell.ts` / `.css` | Shared branded header and grouped navigation; no framework or renderer dependency. |
+| `src/example-shell.ts` / `.css` | Shared branded header, React connection form and per-example guidance; no renderer dependency. |
 | `controller-gateway.mjs` | Server target/policy checks, input ownership/freshness, local MQTT publisher and reference consumer. |
 | `simulation-gateway.mjs` | Explicit bounded backend physics workload start/status/owned stop. |
 | `server.mjs` | Local BFF holding credentials and restricting environment/twins/endpoints; forwards commands only when explicitly enabled. |
@@ -121,7 +132,7 @@ Closing the view disposes Cesium and observation timers without cancelling auton
 
 All settings are documented in `.env.example` and are local-only; no deployment workflow or Terraform settings are introduced.
 
-Run `pnpm test` from the repository root for the client and gateway/controller checks. The production build uses multiple Vite HTML entries. Cesium is isolated to the GIS and aerial planning pages; the environment and robot views use the optional Three.js package. [Vite multi-page applications](https://vite.dev/guide/build.html#multi-page-app).
+Run `pnpm test` from the repository root for the client and gateway/controller checks. The production build uses multiple Vite HTML entries. Cesium is isolated to the navigation, aerial planning and GIS operations pages; the environment and robot views use the optional Three.js package. [Vite multi-page applications](https://vite.dev/guide/build.html#multi-page-app).
 
 
 ## Inspection and aerial workbenches
@@ -168,17 +179,17 @@ For application-owned server integrations, see the [typed governance and evidenc
 
 ### Human actions and dataset evidence (preview backend)
 
-Open [Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) from the header dropdown. Connect to the matching local backend as the assigned person. The example lists actions, submits explicit consent/acknowledgement, and displays a media collection by UUID. The platform inbox handles photo upload; Dataset → Samples handles labels. See [human-action recipes](../recipes/human-actions.ts), [evidence recipes](../recipes/evidence.ts), and [reviewed YOLO training export](../training/README.md). Remote reads remain available; this demonstration gateway limits mutations to authenticated local APIs.
+Open [Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) from the header dropdown. Connect to the matching local backend as the assigned person. The example lists actions, submits explicit consent/acknowledgement, and displays a media collection by UUID. The platform inbox handles photo upload; Dataset → Samples handles labels. This page displays only the first 100 samples of the chosen collection; it is not a complete dataset browser. See [human-action recipes](../recipes/human-actions.ts), [evidence recipes](../recipes/evidence.ts), and [reviewed YOLO training export](../training/README.md). Remote reads remain available; this demonstration gateway limits mutations to authenticated local APIs.
 
 ### Capture and annotation
 
-[15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) opens local photos or a real Dataset sample, captures camera frames, edits boxes/polygons and saves an explicit sample review. The shared header controls the target API. Enter a model UUID to load supported image tasks from the backend and explicitly run one; remote writes remain disabled in this demo. Masks remain model proposals until reviewed, with no fabricated mask-to-box conversion. See the [React annotation guide](../../packages/react/ANNOTATION.md) and [training export](../training/README.md).
+[15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) opens local photos or the first sample of a selected Dataset, captures camera frames, edits boxes/polygons and saves an explicit sample review. The shared header controls the target API. Enter a model UUID to load supported image tasks from the backend and explicitly run one; remote writes remain disabled in this demo. Masks remain model proposals until reviewed, with no fabricated mask-to-box conversion. See the [React annotation guide](../../packages/react/ANNOTATION.md) and [training export](../training/README.md).
 
 For a queued model, the panel shows the accepted execution ID and status. **Stop monitoring** stops browser reads while the backend job continues; **Resume monitoring** reads the same execution without another inference submission. The resume handle belongs to the current API connection, image and task; changing these or reloading clears it. Monitoring times out after five minutes, leaving the accepted ID available to resume. Only canonical, task-compatible completed results reach the overlay. HTTP errors and failed jobs remain visible.
 
 ## Dedicated sensor examples
 
-Examples 16 and 17 share environment/twin/sensor selection, the API header and SDK hooks. Sensors come from backend-resolved capabilities. The video example requires an active RGB/depth producer, the new backend video routes, and a reachable SFU; it consumes live or simulation video without starting a producer or issuing control commands. Configure deployment ICE servers in its advanced control if needed. Its POST negotiation is allowed only against authenticated local APIs in this development BFF. Stop viewing before changing API connections. The telemetry example reads persisted samples in a fixed window and shows a real-time integration snippet; it does not connect to MQTT or simulate data.
+Examples 16 and 17 share environment/twin/sensor selection, the API header and SDK hooks. Sensors come from backend-resolved capabilities. The video example requires an active RGB/depth producer, the new backend video routes, and a reachable SFU; it consumes live or simulation video without starting a producer or issuing control commands. Configure deployment ICE servers in its advanced control if needed. Its POST negotiation is allowed only against authenticated local APIs in this development BFF. Stop viewing before changing API connections. The telemetry example offers paginated persisted history and a separate live panel through the local MQTT bridge described below. Live delivery does not imply persistence, and neither panel substitutes synthetic data for missing packets.
 
 See the [custom UI guide](../../docs/custom-ui.md) for auth, source identity, lifecycle, error states, clocks, styling, recording capture and remaining deployment capabilities.
 
@@ -202,3 +213,8 @@ for custom capture/annotation flows and application-owned MQTT adapters.
 ## GIS journeys and activity results
 
 Example 18 is fully synthetic and can be explored without private API access. Search a site or industry, select a Cesium marker, choose an inspection/intervention, filter results and export JSON. OpenStreetMap is enabled explicitly and can be replaced with the local grid. Example 19 reads actual environment/campaign/recording catalogs from the shared connection; absent geo anchors and media remain explicit. No map click starts work. See [GIS components and integration](../../docs/gis-operations.md) for composition, coordinate contracts, authorized media resolution and source-of-truth boundaries. The maintenance campaign picker and recording-review page now reuse these same components.
+
+
+## Build your own experience
+
+Start with the [React component reference](../../packages/react/README.md) and [checked camera → capture → review composition](src/recipes/camera-review.tsx). The [component roadmap](../../docs/component-opportunities.md) records remaining integration gaps and proposed reusable pieces. Example catalog edits are checked during `pnpm build`; regenerate this page's catalog with `pnpm examples:write`.

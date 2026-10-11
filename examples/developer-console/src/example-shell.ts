@@ -1,54 +1,7 @@
 import "./example-shell.css";
 import { mountHeaderConnection } from "./header-connection.tsx";
-const groups = [
-  { name: "Asset operations & GIS", items: [["/asset-operations.html", "18 · Asset operations map"], ["/inspection-atlas.html", "19 · Inspection atlas"]] },
-  { name: "Video & telemetry", items: [["/sensor-video.html", "16 · Sensor video"], ["/sensor-telemetry.html", "17 · Sensor telemetry"]] },
-  { name: "Human review & training", items: [["/human-evidence.html", "14 · Human actions & evidence"], ["/image-annotation.html", "15 · Capture & annotation"]] },
-  {
-    name: "SDK components",
-    items: [
-      ["/environments.html", "01 · Environment explorer"],
-      ["/asset-catalog.html", "02 · Real asset studio"],
-    ],
-  },
-  {
-    name: "Visualization",
-    items: [
-      ["/", "03 · Cesium GIS & mission drafting"],
-      ["/twin-monitor.html", "04 · Twin & camera monitor"],
-    ],
-  },
-  {
-    name: "Simulation",
-    items: [
-      ["/mission-simulation.html", "05 · Mission timeline"],
-      ["/robot-environment.html", "06 · Robot environment & runtime modes"],
-    ],
-  },
-  {
-    name: "Command & control",
-    items: [["/keyboard-telecontrol.html", "07 · Keyboard controller input"]],
-  },
-  {
-    name: "Planning & governance",
-    items: [["/mission-library.html", "11 · Workflows & schedules"]],
-  },
-  {
-    name: "Maintenance",
-    items: [
-      ["/maintenance-planning.html", "12 · Maintenance planning"],
-      ["/maintenance-verification.html", "13 · Maintenance verification"],
-    ],
-  },
-  {
-    name: "Inspection & GIS",
-    items: [
-      ["/aerial-inspection.html", "08 · Aerial inspection planning"],
-      ["/inspection-workbench.html", "09 · Campaign & evidence review"],
-      ["/recording-review.html", "10 · Recording catalog & playback"],
-    ],
-  },
-];
+import { examples } from "./example-catalog.ts";
+const groups = Array.from(new Set(examples.map((example) => example.group)));
 const header = document.createElement("header");
 header.className = "example-header";
 const brand = document.createElement("a");
@@ -63,16 +16,17 @@ caption.textContent = "Developer examples";
 brand.append(caption);
 const label = document.createElement("label");
 label.className = "example-picker";
-label.textContent = `Examples · ${groups.reduce((sum, group) => sum + group.items.length, 0)}`;
+label.textContent = `Examples · ${examples.length}`;
 const select = document.createElement("select");
 select.setAttribute("aria-label", "Choose developer example");
 for (const group of groups) {
   const node = document.createElement("optgroup");
-  node.label = `${group.name} · ${group.items.length}`;
-  for (const [path, title] of group.items) {
+  const items = examples.filter((example) => example.group === group);
+  node.label = `${group} · ${items.length}`;
+  for (const { path, title, id } of items) {
     const option = document.createElement("option");
     option.value = path;
-    option.textContent = title;
+    option.textContent = `${String(id).padStart(2, "0")} · ${title}`;
     option.selected =
       (location.pathname === "/index.html" ? "/" : location.pathname) === path;
     node.append(option);
@@ -86,3 +40,45 @@ connection.className = "example-api";
 header.append(brand, label, connection);
 document.body.prepend(header);
 mountHeaderConnection(connection);
+
+const current = examples.find(
+  (example) =>
+    example.path ===
+    (location.pathname === "/index.html" ? "/" : location.pathname),
+);
+if (current) {
+  const guide = document.createElement("details");
+  guide.className = "example-guide";
+  const summary = document.createElement("summary");
+  summary.textContent = "About this example · data, setup and reusable pieces";
+  guide.append(summary);
+  const content = document.createElement("div");
+  for (const [label, value] of [
+    ["Data source", current.data],
+    ["Before you start", current.setup],
+    ["Actions and persistence", current.actions],
+    ["Reuse", current.reuse],
+  ]) {
+    const paragraph = document.createElement("p"),
+      title = document.createElement("strong");
+    title.textContent = `${label}: `;
+    paragraph.append(title, document.createTextNode(value));
+    content.append(paragraph);
+  }
+  const root =
+    "https://github.com/cyberwave-os/cyberwave-node/blob/codex/cyb-4234-javascript-sdk-components/";
+  for (const [title, path] of [
+    ["Example source", `examples/developer-console/src/${current.source}`],
+    ["Integration guide", "docs/custom-ui.md"],
+    ["Component reference", "packages/react/README.md"],
+  ]) {
+    const link = document.createElement("a");
+    link.textContent = title;
+    link.href = root + path;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    content.append(link);
+  }
+  guide.append(content);
+  header.after(guide);
+}

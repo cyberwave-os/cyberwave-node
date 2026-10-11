@@ -1,6 +1,14 @@
 # Reuse existing APIs
 
-These server-side TypeScript recipes use `client.rest` and the generated OpenAPI contract. They introduce no new SDK service, scheduler, budget balance or evidence model. Run `pnpm build:sdk` first; import the functions into an application-owned Node handler. They do not execute requests on import.
+These TypeScript recipes compose the generated OpenAPI contract and existing SDK helpers. They introduce no new SDK service, scheduler, budget balance or evidence model. Run `pnpm build:sdk` first. They do not execute requests on import.
+
+| Recipe | Execution context | Starting point |
+| --- | --- | --- |
+| [Workspace governance](governance.ts) | Application server / BFF | Usage, organization credits and scheduled workflow reporting |
+| [Evidence](evidence.ts) | Application server / BFF | Recording windows, Episodes and Dataset membership |
+| [Human actions](human-actions.ts) | Application server / BFF | Assigned actions and explicit responses |
+| [Video and sensors](video-and-sensors.ts) | Browser for WebRTC/media; host owns subscription transport | Sensor discovery, camera viewing and telemetry |
+| [React camera review](../developer-console/src/recipes/camera-review.tsx) | Browser / client component | Provider, capture, annotations and explicit handoff |
 
 ```ts
 import { createCyberwave } from 'cyberwave';
@@ -38,7 +46,7 @@ Native Episode-based Dataset creation remains robotics-oriented. The preview bac
 
 `human-actions.ts` lists assigned actions and submits an explicit response through generated REST calls. The backend enforces assignee access, deadlines, idempotency and resume. A photo action first uses the existing Attachment create/upload APIs, then submits its UUID with `decision: "completed"`.
 
-The [interactive example](../developer-console/human-evidence.html) and platform inbox show these flows. The [training recipe](../training/README.md) exports reviewed images and boxes to YOLO with checksums and reviewer provenance. Use your existing HTTP Request / Run Workflow nodes to dispatch a worker; no extra training node is needed.
+The [interactive example](http://127.0.0.1:5173/human-evidence.html) shows consent/acknowledgement and the first page of sample evidence; the platform inbox also handles photo upload. Start the [developer console](../developer-console/README.md) before opening localhost links. The [training recipe](../training/README.md) exports reviewed images and boxes to YOLO with checksums and reviewer provenance. Use your existing HTTP Request / Run Workflow nodes to dispatch a worker; no extra training node is needed.
 
 ## Validation
 

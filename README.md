@@ -2,6 +2,112 @@
 
 Build a customer-specific application with the [custom UI integration guide](docs/custom-ui.md): session ownership, sensor discovery, video, telemetry, recordings, evidence, styling and independent command controls. Dedicated examples: [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) and [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html). These preview APIs require the matching backend branch. For map → asset → activity → evidence, see the [GIS operations guide](docs/gis-operations.md), [18 · Asset operations](http://127.0.0.1:5173/asset-operations.html) and [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html).
 
+The official [`cyberwave`](https://www.npmjs.com/package/cyberwave) package for Node.js and browser applications, with optional React components and a 3D renderer. This is the next increment of [cyberwave-node](https://github.com/cyberwave-os/cyberwave-node), retaining its package identity and Apache-2.0 license.
+
+**Release status:** this guide targets the `0.1.0` development checkout. Build this branch or install its locally packed tarballs; do not assume the current npm release includes these preview APIs.
+
+## Packages
+
+| Package | Responsibility |
+| --- | --- |
+| `cyberwave` | Generated OpenAPI types + typed Fetch transport; authentication injection, catalog/environment, workflow configuration/run helpers, legacy mission and recording read helpers and scene loading. No React or 3D dependency. |
+| `@cyberwave/react` | Browsers, workflow planning/monitoring, inspection results, recording playback and sensor telemetry; optional video, annotation and GIS entries. See the [component reference](packages/react/README.md) for imports, provider requirements and composition. Opt-in CSS tokens. |
+| `@cyberwave/environment-3d` | Read-only Three.js renderer for actual GLB and URDF models, meshes, measured poses and joints; orbit, fit and selection. No command transport. |
+
+## Run the examples
+
+Use Node 24+ and pnpm 10.28.0. From the SDK repository root (`cyberwave-sdks/cyberwave-node` in the monorepo):
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm server
+# In a second terminal:
+pnpm dev
+```
+
+Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **nineteen examples**, including [Cesium GIS navigation drafts](http://127.0.0.1:5173/), [route timeline preview](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), [camera monitoring](http://127.0.0.1:5173/twin-monitor.html), and [human actions & reviewed evidence](http://127.0.0.1:5173/human-evidence.html).
+
+New workbenches: [aerial inspection planning](http://127.0.0.1:5173/aerial-inspection.html), [campaign and evidence review](http://127.0.0.1:5173/inspection-workbench.html), and [recording catalog/playback](http://127.0.0.1:5173/recording-review.html).
+
+See the [example guide](examples/developer-console/README.md) for local backend, broker, and physics-worker configuration. The examples run from this repository without the private Cyberwave application.
+
+The explorer defaults to **https://api.cyberwave.com**. Public catalog assets work anonymously. Enter a token to access authorized environments, or enter a custom HTTPS/localhost API origin. The development gateway handles API CORS, holds the token in memory for one hour and uses an HttpOnly SameSite session cookie. Use the shared **API** header on every example to connect. Switching reloads the page and clears local drafts, selections and models; export drafts first. **Reset to public** drops the previous credentials and returns to anonymous production access. Tokens are never written to browser storage or sent to model storage URLs. A production application should provide its own authenticated BFF and session lifecycle.
+
+## Use the client
+
+```ts
+import { createCyberwave } from 'cyberwave';
+
+const client = createCyberwave({
+  // Defaults to https://api.cyberwave.com; immutable for this client instance.
+  baseUrl: process.env.CYBERWAVE_API_URL,
+  getToken: () => process.env.CYBERWAVE_API_TOKEN,
+});
+const environments = await client.environments.list({ limit: 20 });
+const environment = environments[0];
+if (!environment) throw new Error('No accessible environments; create or select one first');
+const scene = await client.loadEnvironment(environment.uuid);
+console.log(scene.objects, scene.warnings);
+
+// Full generated API escape hatch: request/response types follow OpenAPI.
+const result = await client.rest.GET('/api/v1/environments/{uuid}/waypoints', {
+  params: { path: { uuid: environment.uuid } },
+});
+if (!result.response.ok) throw new Error(`Request failed: ${result.response.status}`);
+```
+
+The application owns authentication: provide a per-request `getToken` callback for refreshed tokens, and create a new client when the origin or user changes. REST helpers throw `CyberwaveError` with HTTP status; the generated `rest` interface returns `{ data, error, response }`. Read helpers accept `AbortSignal`. API requests have a timeout, omit ambient cookies and reject redirects. SDK instances do not share credentials or caches.
+
+Direct browser connections require the API to allow the application's origin. The examples use an injectable same-origin Fetch adapter instead. Long-lived privileged API keys belong in a server/BFF, not in a frontend bundle. The development token form is for explicit integration testing, not an OAuth login implementation.
+
+## Compose React UI
+
+```tsx
+import { CyberwaveProvider, EnvironmentBrowser } from '@cyberwave/react';
+import '@cyberwave/react/styles.css';
+
+<CyberwaveProvider client={client}>
+  <EnvironmentBrowser onSelect={environment => setEnvironmentId(environment.uuid)} />
+</CyberwaveProvider>
+```
+
+For a complete typed composition with scoped state and lifecycle, copy the [camera capture/review recipe](examples/developer-console/src/recipes/camera-review.tsx). The [React component reference](packages/react/README.md) distinguishes provider-backed components, explicit client props and display-only pieces.
+
+`useEnvironment(id)` loads metadata, twins and deduplicated asset references with cancellation. `EnvironmentSummary` displays counts and partial-loading notes. Override `--cw-*` CSS variables or use the headless client/hooks with your own components. For proxied resources, pass `resolveResource` to the browser components and renderer.
+
+## Keep rendering separate from control
+
+```ts
+import { createEnvironmentViewer } from '@cyberwave/environment-3d';
+
+const viewer = createEnvironmentViewer(container, { onSelect: setSelectedTwin });
+const scene = await client.loadEnvironment(environmentId);
+await viewer.setObjects(scene.objects);
+viewer.updatePose(twinId, observedPose); // or a separate simulation snapshot
+// On unmount:
+viewer.destroy();
+```
+
+Scene coordinates are local Z-up metres; poses retain the API's quaternion, scale and root frame. The viewer never publishes commands. Mission drafts, user input, control ownership, validation and execution belong to separate adapters. The Cesium example demonstrates a separate GIS renderer with an explicit local-to-ENU anchor. The keyboard example compiles input to the existing `locomotion.velocity_command.v1` contract. Kinematic preview, observed telemetry and backend physics have distinct lifecycles.
+
+Currently supported visuals: GLB and URDF with DAE/STL/OBJ/GLTF meshes. Unsupported representations (such as splats) and unresolved attached frames are reported, rather than positioned incorrectly. External GLTF resources/URDF package layouts may need a custom resolver; OBJ material libraries and Draco/KTX decoders remain follow-up work. Receive-only WebRTC and sensor subscriptions are available through the [video/telemetry guide](docs/custom-ui.md); they do not automatically synchronize the 3D renderer. Large Cesium/Three bundles are loaded only by examples that use them, never by the core SDK.
+
+## Generated contracts and validation
+
+```sh
+pnpm generate            # deterministic: use checked-in schema
+pnpm generate --refresh  # intentionally refresh from production (or CYBERWAVE_API_URL)
+pnpm build
+pnpm test
+pnpm pack:check          # install all tarballs outside the workspace; verify imports/types
+```
+
+The pinned [OpenAPI TypeScript generator](https://openapi-ts.dev/) generates `src/generated/schema.ts` from the public API snapshot in `schema/openapi.json`. `schema/sha256.txt` records its digest. Never hand-edit generated types. Keep ergonomic client/UI code separate so regeneration cannot overwrite it. CI checks regeneration, builds, tests, and standalone packaging. `pnpm examples:check` also verifies that all HTML entries, composition roots, navigation and the generated guide agree; after editing the shared example catalog, run `pnpm examples:write`. Networked API/model checks are explicit development validation, not a CI dependency.
+
+The package remains ESM, uses the platform Fetch API, and publishes compiled JavaScript plus declarations. No npm publish is performed by CI in this increment. The initial follow-up should establish trusted npm publishing and versioning for the three packages together.
+
+
 ## Planning with workflows
 
 Use **workflow template → configured workflow → run**, with an optional recurring schedule. The [Workflows & schedules example](http://127.0.0.1:5173/mission-library.html) lets you select a template, create an inactive draft in an environment or workspace, configure targets, run now or enable a recurring schedule, and monitor node execution/results. It uses existing backend endpoints; no new mission model or scheduler is required.
@@ -48,108 +154,6 @@ Use `client.inspections.list/get/importCampaign/history/review`. Manifests conta
 
 These additive endpoints are **development features**, not a claim about production deployment. Their OpenAPI fragment is exported from the backend into `schema/extensions.openapi.json` and generated into `src/generated/extensions.ts`, separate from the pinned production schema. Refresh with `pnpm generate --extensions-from=/absolute/path/to/backend-openapi.json`. Older servers can return 404; the inspection panel explains unavailability. The example gateway permits allowlisted inspection metadata and workflow operations on authenticated localhost connections; telecontrol routes retain their separate configured target.
 
-The official [`cyberwave`](https://www.npmjs.com/package/cyberwave) package for Node.js and browser applications, with optional React components and a 3D renderer. This is the next increment of [cyberwave-node](https://github.com/cyberwave-os/cyberwave-node), retaining its package identity and Apache-2.0 license.
-
-**Release status:** this branch prepares `0.1.0`. The published `0.0.1` package is the earlier placeholder; installing it from npm does not install this implementation. Build from this checkout or install the locally packed tarballs until a release is approved.
-
-## Packages
-
-| Package | Responsibility |
-| --- | --- |
-| `cyberwave` | Generated OpenAPI types + typed Fetch transport; authentication injection, catalog/environment, workflow configuration/run helpers, legacy mission and recording read helpers and scene loading. No React or 3D dependency. |
-| `@cyberwave/react` | `CyberwaveProvider`, `useCyberwave`, `useEnvironment`, `ConnectionPanel`, `EnvironmentBrowser`, `AssetBrowser`, `EnvironmentSummary`, `RecordingBrowser`, `useRecordingPlayback`, `RecordingVideo`, `WorkflowCatalog`, `WorkflowPlanner`, `WorkflowMonitor`, `InspectionVerificationPanel`; opt-in CSS tokens. |
-| `@cyberwave/environment-3d` | Read-only Three.js renderer for actual GLB and URDF models, meshes, measured poses and joints; orbit, fit and selection. No command transport. |
-
-## Run the examples
-
-Use Node 24+ and pnpm 10.28.0. From the repository root:
-
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-pnpm server
-# In a second terminal:
-pnpm dev
-```
-
-Open the [asset studio](http://127.0.0.1:5173/asset-catalog.html) or [environment explorer](http://127.0.0.1:5173/environments.html). The grouped header links all **nineteen examples**, including [Cesium GIS planning](http://127.0.0.1:5173/), [mission simulation](http://127.0.0.1:5173/mission-simulation.html), [robot runtime modes](http://127.0.0.1:5173/robot-environment.html), [keyboard input](http://127.0.0.1:5173/keyboard-telecontrol.html), [camera monitoring](http://127.0.0.1:5173/twin-monitor.html), and [human actions & reviewed evidence](http://127.0.0.1:5173/human-evidence.html).
-
-New workbenches: [aerial inspection planning](http://127.0.0.1:5173/aerial-inspection.html), [campaign and evidence review](http://127.0.0.1:5173/inspection-workbench.html), and [recording catalog/playback](http://127.0.0.1:5173/recording-review.html).
-
-See the [example guide](examples/developer-console/README.md) for local backend, broker, and physics-worker configuration. The examples run from this repository without the private Cyberwave application.
-
-The explorer defaults to **https://api.cyberwave.com**. Public catalog assets work anonymously. Enter a token to access authorized environments, or enter a custom HTTPS/localhost API origin. The development gateway handles API CORS, holds the token in memory for one hour and uses an HttpOnly SameSite session cookie. Use the shared **API** header on every example to connect. Switching reloads the page and clears local drafts, selections and models; export drafts first. **Reset to public** drops the previous credentials and returns to anonymous production access. Tokens are never written to browser storage or sent to model storage URLs. A production application should provide its own authenticated BFF and session lifecycle.
-
-## Use the client
-
-```ts
-import { createCyberwave } from 'cyberwave';
-
-const client = createCyberwave({
-  // Defaults to https://api.cyberwave.com; immutable for this client instance.
-  baseUrl: process.env.CYBERWAVE_API_URL,
-  getToken: () => process.env.CYBERWAVE_API_TOKEN,
-});
-const environments = await client.environments.list({ limit: 20 });
-const scene = await client.loadEnvironment(environments[0].uuid);
-console.log(scene.objects, scene.warnings);
-
-// Full generated API escape hatch: request/response types follow OpenAPI.
-const result = await client.rest.GET('/api/v1/environments/{uuid}/waypoints', {
-  params: { path: { uuid: environments[0].uuid } },
-});
-if (!result.response.ok) throw new Error(`Request failed: ${result.response.status}`);
-```
-
-The application owns authentication: provide a per-request `getToken` callback for refreshed tokens, and create a new client when the origin or user changes. REST helpers throw `CyberwaveError` with HTTP status; the generated `rest` interface returns `{ data, error, response }`. Read helpers accept `AbortSignal`. API requests have a timeout, omit ambient cookies and reject redirects. SDK instances do not share credentials or caches.
-
-Direct browser connections require the API to allow the application's origin. The examples use an injectable same-origin Fetch adapter instead. Long-lived privileged API keys belong in a server/BFF, not in a frontend bundle. The development token form is for explicit integration testing, not an OAuth login implementation.
-
-## Compose React UI
-
-```tsx
-import { CyberwaveProvider, EnvironmentBrowser } from '@cyberwave/react';
-import '@cyberwave/react/styles.css';
-
-<CyberwaveProvider client={client}>
-  <EnvironmentBrowser onSelect={environment => setEnvironmentId(environment.uuid)} />
-</CyberwaveProvider>
-```
-
-`useEnvironment(id)` loads metadata, twins and deduplicated asset references with cancellation. `EnvironmentSummary` displays counts and partial-loading notes. Override `--cw-*` CSS variables or use the headless client/hooks with your own components. For proxied resources, pass `resolveResource` to the browser components and renderer.
-
-## Keep rendering separate from control
-
-```ts
-import { createEnvironmentViewer } from '@cyberwave/environment-3d';
-
-const viewer = createEnvironmentViewer(container, { onSelect: setSelectedTwin });
-const scene = await client.loadEnvironment(environmentId);
-await viewer.setObjects(scene.objects);
-viewer.updatePose(twinId, observedPose); // or a separate simulation snapshot
-// On unmount:
-viewer.destroy();
-```
-
-Scene coordinates are local Z-up metres; poses retain the API's quaternion, scale and root frame. The viewer never publishes commands. Mission drafts, user input, control ownership, validation and execution belong to separate adapters. The Cesium example demonstrates a separate GIS renderer with an explicit local-to-ENU anchor. The keyboard example compiles input to the existing `locomotion.velocity_command.v1` contract. Kinematic preview, observed telemetry and backend physics have distinct lifecycles.
-
-Currently supported visuals: GLB and URDF with DAE/STL/OBJ/GLTF meshes. Unsupported representations (such as splats) and unresolved attached frames are reported, rather than positioned incorrectly. External GLTF resources/URDF package layouts may need a custom resolver; OBJ material libraries, Draco/KTX decoders, live MQTT observation and WebRTC extraction remain follow-up work. Large Cesium/Three bundles are loaded only by examples that use them, never by the core SDK.
-
-## Generated contracts and validation
-
-```sh
-pnpm generate            # deterministic: use checked-in schema
-pnpm generate --refresh  # intentionally refresh from production (or CYBERWAVE_API_URL)
-pnpm build
-pnpm test
-pnpm pack:check          # install all tarballs outside the workspace; verify imports/types
-```
-
-The pinned [OpenAPI TypeScript generator](https://openapi-ts.dev/) generates `src/generated/schema.ts` from the public API snapshot in `schema/openapi.json`. `schema/sha256.txt` records its digest. Never hand-edit generated types. Keep ergonomic client/UI code separate so regeneration cannot overwrite it. CI checks regeneration, builds, tests, and standalone packaging. Networked API/model checks are explicit development validation, not a CI dependency.
-
-The package remains ESM, uses the platform Fetch API, and publishes compiled JavaScript plus declarations. No npm publish is performed by CI in this increment. The initial follow-up should establish trusted npm publishing and versioning for the three packages together.
-
-
 ## Recording review and mission reads
 
 ```ts
@@ -170,7 +174,7 @@ const executions = await client.missions.executions(twinId, missionId);
 
 Mission writes remain available through `client.rest` using generated contracts. The examples' general connection permits remote reads and explicitly scoped local workflow/inspection writes. A saved task sequence, a scheduled execution, and a validated aircraft flight plan are separate concepts. Application services own preparation, approvals, idempotency, resource allocation and command execution.
 
-The aerial workbench is a synthetic draft and kinematic cursor, not an autopilot or physics simulator. It distinguishes multirotor, runway/catapult fixed-wing and hybrid VTOL requirements. Coverage geometry assumes flat ground; non-AGL input is blocked pending terrain/datum conversion. It exposes runway length, turn-radius and reserve checks without declaring a route flight-ready. The inspection workbench keeps persistent defect identity separate from campaign observations, technical condition, review and maintenance priority; its local review/export data model is illustrative and is not an implemented backend API.
+The aerial workbench is a synthetic draft and kinematic cursor, not an autopilot or physics simulator. It distinguishes multirotor, runway/catapult fixed-wing and hybrid VTOL requirements. Coverage geometry assumes flat ground; non-AGL input is blocked pending terrain/datum conversion. It exposes runway length, turn-radius and reserve checks without declaring a route flight-ready. The inspection workbench keeps persistent defect identity separate from campaign observations, technical condition, review and maintenance priority; its local comparison/export state is illustrative. The optional connected panel persists campaigns and review revisions through the development inspection API described above; those records are separate from browser drafts.
 
 
 ## Maintenance planning and verification
@@ -229,14 +233,14 @@ Workflow catalogs use the existing `is_template=false` list filter before server
 
 ```ts
 const actions = await client.humanActions.list({ workspace_uuid: workspaceId });
-await client.humanActions.respond(actionId, { decision: 'completed', note: 'Photo collected' });
+await client.humanActions.respond(actionId, { decision: 'completed', note: 'Manual checklist completed' });
 const page = await client.datasets.samples(datasetId, { limit: 50 });
 await client.datasets.reviewSample(datasetId, sampleId, {
   revision: sample.revision, status: 'approved', annotations: reviewedLabels,
 });
 ```
 
-`datasets.createCollection`, `appendSample` and `get` cover collection creation, attachment membership and dataset details. Review and response rules remain on the backend; the SDK does not auto-retry mutations. These preview routes need the matching backend. Use `client.rest` for the complete generated API surface.
+`datasets.createCollection`, `appendSample` and `get` cover collection creation, attachment membership and dataset details. Choose a response matching the action kind: the snippet acknowledges a manual action; a photo action also requires an uploaded Attachment UUID. Review and response rules remain on the backend; the SDK does not auto-retry mutations. These preview routes need the matching backend. Use `client.rest` for the complete generated API surface.
 
 The [typed integration recipes](examples/recipes/README.md) compose existing generated REST APIs: workspace usage and organization credit reporting, recording-window selection as an Episode, and collection of existing Episodes into a Dataset. They add no new service facade or storage primitive. `pnpm recipes:check` checks these examples during the SDK build.
 
@@ -257,3 +261,8 @@ The [training recipe](examples/training/README.md) exports approved images and l
 [Example 15](http://127.0.0.1:5173/image-annotation.html) uses `@cyberwave/react/annotation`: Annotorious-backed rectangle/polygon editing, camera/video frame capture and canonical ML-result overlays. Task schemas and image coordinates come from the backend ML registry; provider parsing stays in its adapters. Reviewed polygons reuse Dataset samples, source hashes and revision checks, and the worker recipe can export YOLO segmentation labels. See the [component and integration guide](packages/react/ANNOTATION.md).
 
 Accepted asynchronous model jobs can be monitored through `client.mlmodels.waitForExecution(executionUuid, { signal, onProgress })`, using existing persisted backend executions. The annotation helper handles both immediate and queued results; the example exposes stop/resume without submitting twice. Stopping monitoring leaves the server job running. Keep the accepted execution ID with its original image/task to resume after a timeout or page reload. There is no new job service or automatic inference retry.
+
+
+## Next component opportunities
+
+The [example review and component roadmap](docs/component-opportunities.md) prioritizes a shared environment/twin picker, paginated dataset-sample browser and human-action inbox. These are proposed extractions from existing flows, not shipped exports or new backend models.

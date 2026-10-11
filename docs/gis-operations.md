@@ -57,6 +57,7 @@ Zero is a valid measurement. A missing unit stays explicit; an unavailable resul
 Install `cesium` (the example pins 1.146.0), import the optional entry and styles, and serve Cesium's `Workers`, `ThirdParty`, `Assets` and `Widgets` folders. Set `CESIUM_BASE_URL` to that served directory before the viewer mounts. Reuse the [working Vite configuration](../examples/developer-console/vite.config.mjs) and adapt its paths to your deployment's base path. The ordinary `@cyberwave/react` entry does not load Cesium.
 
 ```tsx
+import { useMemo } from 'react';
 import { LocationMap } from '@cyberwave/react/gis';
 import { environmentMapLocation, type Environment } from 'cyberwave';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -67,10 +68,10 @@ function SiteMap({ environments, selectedId, select }: {
   selectedId?: string;
   select: (id: string) => void;
 }) {
-  const locations = environments.flatMap(environment => {
+  const locations = useMemo(() => environments.flatMap(environment => {
     const point = environmentMapLocation(environment);
     return point ? [point] : [];
-  });
+  }), [environments]);
   return <LocationMap locations={locations} selectedId={selectedId} onSelect={select} />;
 }
 ```

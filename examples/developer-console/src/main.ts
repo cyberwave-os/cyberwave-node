@@ -62,7 +62,7 @@ async function start() {
   snapshot = await cyberwave.snapshot();
   element('mode').textContent = snapshot.mode === 'fixture' ? 'Fixture preview · no physical commands' :
     `Connected · ${snapshot.executionEnabled ? 'command dispatch enabled' : 'read and draft only'}`;
-  element<HTMLButtonElement>('execute').textContent = snapshot.mode === 'fixture' ? 'Preview fixture mission' : 'Start mission';
+  element<HTMLButtonElement>('execute').textContent = snapshot.mode === 'fixture' ? 'Preview fixture route' : 'Start navigation';
   for (const twin of snapshot.twins) {
     const option = document.createElement('option'); option.value = twin.uuid; option.textContent = twin.name; target.append(option);
   }

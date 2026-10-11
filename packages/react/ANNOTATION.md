@@ -5,13 +5,20 @@ The optional `@cyberwave/react/annotation` entry provides image tools without ad
 ```tsx
 import { useState } from 'react';
 import type { SampleAnnotation } from 'cyberwave';
-import { ImageAnnotationEditor, ImageCapture } from '@cyberwave/react/annotation';
+import { ImageAnnotationEditor } from '@cyberwave/react/annotation';
 import '@cyberwave/react/styles.css';
 import '@cyberwave/react/annotation.css';
 
-function Review({ imageUrl, saveReview }: {
-  imageUrl: string; saveReview: (labels: SampleAnnotation[]) => void;
-}) {
+type ReviewProps = {
+  imageUrl: string;
+  // Include session, sample ID and revision; never include a token.
+  sourceKey: string;
+  saveReview: (labels: SampleAnnotation[]) => void;
+};
+function Review(props: ReviewProps) {
+  return <ReviewDraft key={props.sourceKey} {...props} />;
+}
+function ReviewDraft({ imageUrl, saveReview }: ReviewProps) {
   const [annotations, setAnnotations] = useState<SampleAnnotation[]>([]);
   const [valid, setValid] = useState(false);
   return <>
@@ -21,7 +28,8 @@ function Review({ imageUrl, saveReview }: {
   </>;
 }
 // Your saveReview handler uses the existing sample review endpoint and revision.
-// ImageCapture onCapture receives {blob, width, height, mediaTime, capturedAt}.
+// Change sourceKey on account/sample/revision changes to discard old labels.
+// Import ImageCapture separately for local camera capture.
 ```
 
 For a complete capture-review step, use `CapturedFrameReview` with a `CapturedFrame`
