@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   type CyberwaveClient,
+  type MLModel,
   type DatasetSample,
   type SampleAnnotation,
   type StructuredImageAction,
@@ -9,6 +10,8 @@ import {
 import {
   ImageAnnotationEditor,
   ImageCapture,
+  ImageModelTaskControls,
+  imageModelUnavailableReason,
   ModelResultOverlay,
   loadImageModelTasks,
   runImageModelTask,
@@ -16,8 +19,11 @@ import {
   modelBoxProposals,
   type ImageModelResult,
 } from "@cyberwave/react/annotation";
+import { DatasetSampleBrowser, ModelBrowser } from "@cyberwave/react";
 import { ConnectedWorkbench, downloadJson } from "./workbench-connection.tsx";
 import { mediaUrl } from "./connection.ts";
+import { CollectionPicker } from "./collection-picker.tsx";
+import { sameAnnotations } from "./annotation-draft.ts";
 import "@cyberwave/react/styles.css";
 import "@cyberwave/react/annotation.css";
 import "./workbench.css";
@@ -35,14 +41,19 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
   const [job, setJob] = useState<{ uuid: string; status: string }>();
   const [monitoring, setMonitoring] = useState(false);
   const [source, setSource] = useState<Source>(),
-    [draft, setDraft] = useState<SampleAnnotation[]>([]),
-    [dataset, setDataset] = useState("");
+    [draft, setDraft] = useState<SampleAnnotation[]>([]);
+  const [collection, setCollection] = useState(() => ({
+    uuid: new URLSearchParams(location.search).get("dataset") || "",
+    name: "",
+  }));
+  const [sampleRefresh, setSampleRefresh] = useState(0);
+  const dirty = !sameAnnotations(draft, source?.sample?.annotations || []);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [valid, setValid] = useState(false);
   const [model, setModel] = useState(""),
-    [resolvedModel, setResolvedModel] = useState(""),
+    [resolvedModel, setResolvedModel] = useState<MLModel>(),
     [actions, setActions] = useState<StructuredImageAction[]>([]),
     [actionId, setActionId] = useState(""),
     [prompt, setPrompt] = useState(""),
@@ -50,12 +61,17 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
       action: StructuredImageAction;
       value: ImageModelResult;
     }>();
-  const action = actions.find((a) => a.id === actionId);
   const unfinished = job && !["completed", "failed"].includes(job.status);
-  useEffect(() => () => {
-    operation.current?.abort();
-    operation.current = null;
-  }, [client]);
+  const sourceLocked = busy || dirty || !!unfinished;
+  const [browseModels, setBrowseModels] = useState(true);
+  const action = actions.find((a) => a.id === actionId);
+  useEffect(
+    () => () => {
+      operation.current?.abort();
+      operation.current = null;
+    },
+    [client],
+  );
   useEffect(
     () => () => {
       if (source?.url.startsWith("blob:")) URL.revokeObjectURL(source.url);
@@ -63,6 +79,7 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
     [source?.url],
   );
   function choose(next: Source) {
+    if (source?.url !== next.url) setValid(false);
     setSource(next);
     setDraft(next.sample?.annotations || []);
     setResult(undefined);
@@ -82,7 +99,9 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
     } catch (e) {
       if (operation.current !== controller) return;
       if (controller.signal.aborted)
-        setNotice("Monitoring stopped. The server job continues; resume using the same execution.");
+        setNotice(
+          "Monitoring stopped. The server job continues; resume using the same execution.",
+        );
       else setError((e as Error).message);
     } finally {
       if (operation.current === controller) {
@@ -92,16 +111,19 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
       }
     }
   }
-  async function loadSample(signal: AbortSignal) {
-    const page = await client.datasets.samples(dataset.trim(), { limit: 1 }, { signal });
-    const sample = page.items[0];
-    if (!sample?.file_url)
-      throw new Error("No readable unchanged sample found in this collection.");
+  function selectSample(sample: DatasetSample) {
+    if (sourceLocked) return;
+    if (sample.source_changed || !sample.file_url) {
+      setError(
+        `Sample ${sample.uuid}: source changed or media is unavailable. Reload or choose another sample.`,
+      );
+      return;
+    }
     choose({
       url: mediaUrl(sample.file_url),
-      name: "Dataset sample",
+      name: `Sample ${sample.uuid.slice(0, 8)}`,
       sample,
-      dataset: dataset.trim(),
+      dataset: collection.uuid,
     });
   }
   async function approve(signal: AbortSignal) {
@@ -116,11 +138,35 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
       },
       { signal },
     );
+    if (signal.aborted) return;
     setSource({ ...source, sample });
+    setDraft(sample.annotations);
+    setSampleRefresh((value) => value + 1);
     setNotice(`Reviewed labels saved · revision ${sample.revision}`);
   }
+  async function selectModel(uuid: string, signal: AbortSignal) {
+    // Clear the previous model before loading another contract, including on failure.
+    setResolvedModel(undefined);
+    setActions([]);
+    setActionId("");
+    setPrompt("");
+    setResult(undefined);
+    setJob(undefined);
+    const loaded = await loadImageModelTasks(client, uuid, signal);
+    if (signal.aborted) return;
+    setResolvedModel(loaded.model);
+    setActions(loaded.actions);
+    setActionId(loaded.actions[0]?.id || "");
+    setBrowseModels(false);
+  }
   async function run(signal: AbortSignal, resume = false) {
-    if (!source || !action) return;
+    if (
+      !source ||
+      !action ||
+      !resolvedModel ||
+      imageModelUnavailableReason(resolvedModel)
+    )
+      return;
     setMonitoring(true);
     setResult(undefined);
     const options = {
@@ -129,7 +175,12 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
         setJob({ uuid: execution.uuid, status: execution.status }),
     };
     if (resume && job) {
-      const value = await waitForImageModelTask(client, job.uuid, action, options);
+      const value = await waitForImageModelTask(
+        client,
+        job.uuid,
+        action,
+        options,
+      );
       setResult({ action, value });
       return;
     }
@@ -143,7 +194,7 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
     }
     const value = await runImageModelTask(
       client,
-      resolvedModel,
+      resolvedModel.uuid,
       action,
       image,
       prompt,
@@ -174,6 +225,22 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
           {notice}
         </p>
       )}
+      {dirty && (
+        <div role="status" className="panel section-gap">
+          <strong>Unsaved label edits</strong>
+          <p>
+            Save this sample or export your labels before discarding. Image
+            selection and sample browsing are locked while edits are pending.
+          </p>
+          <button
+            className="cw-button"
+            disabled={busy}
+            onClick={() => setDraft(source?.sample?.annotations || [])}
+          >
+            Discard label edits
+          </button>
+        </div>
+      )}
       <div className="workbench-grid">
         <aside className="panel">
           <h2>Choose an image</h2>
@@ -183,7 +250,7 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
-                disabled={busy}
+                disabled={sourceLocked}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -201,27 +268,36 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
                 }}
               />
             </label>
-            <label className="span-2">
-              Dataset UUID
-              <input
-                disabled={busy}
-                value={dataset}
-                onChange={(e) => setDataset(e.target.value)}
-                placeholder="Load an existing sample"
-              />
-            </label>
           </div>
-          <div className="toolbar">
-            <button
-              className="cw-button"
-              disabled={busy || !dataset.trim()}
-              onClick={() => perform(loadSample)}
-            >
-              Load first sample
-            </button>
-          </div>
+          <CollectionPicker
+            value={collection}
+            disabled={sourceLocked}
+            onChange={(value) => {
+              setCollection({ uuid: value.uuid, name: value.name || "" });
+              setSource(undefined);
+              setDraft([]);
+              setResult(undefined);
+              setJob(undefined);
+              setNotice("");
+              setError("");
+            }}
+          />
+          {collection.uuid && (
+            <DatasetSampleBrowser
+              datasetId={collection.uuid}
+              selectedId={
+                source?.dataset === collection.uuid
+                  ? source.sample?.uuid
+                  : undefined
+              }
+              onSelect={selectSample}
+              resolveResource={mediaUrl}
+              disabled={sourceLocked}
+              refreshKey={sampleRefresh}
+            />
+          )}
           <ImageCapture
-            disabled={busy}
+            disabled={sourceLocked}
             onCapture={(frame) =>
               choose({
                 blob: frame.blob,
@@ -307,74 +383,78 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
           Provider-specific parsing stays in Cyberwave's ML adapters. Running a
           model sends this image to the configured backend and may use credits.
         </p>
-        <div className="fields">
-          <label>
-            Model UUID
-            <input
-              disabled={busy}
-              value={model}
-              onChange={(e) => {
-                setModel(e.target.value);
-                setActions([]);
-                setResolvedModel("");
-                setResult(undefined);
-                setJob(undefined);
-              }}
-            />
-          </label>
-          <label>
-            Target / prompt
-            <input
-              disabled={busy || !!unfinished}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
-          </label>
-        </div>
-        <div className="toolbar cw-annotation-toolbar">
+        {resolvedModel && (
           <button
+            type="button"
             className="cw-button"
-            disabled={busy || !model.trim() || !!unfinished}
-            onClick={() =>
-              perform(async (signal) => {
-                const loaded = await loadImageModelTasks(client, model.trim(), signal);
-                setJob(undefined);
-                setResult(undefined);
-                setActions(loaded.actions);
-                setResolvedModel(model.trim());
-                setActionId(loaded.actions[0]?.id || "");
-                setNotice(
-                  loaded.actions.length
-                    ? `${loaded.actions.length} image tasks available.`
-                    : "No supported image annotation contract advertised by this model/backend.",
-                );
-              })
-            }
+            disabled={busy || !!unfinished}
+            onClick={() => setBrowseModels(!browseModels)}
           >
-            Load model tasks
+            {browseModels ? "Hide models" : "Change model"}
           </button>
-          <label>
-            Image task
-            <select
-              disabled={busy}
-              value={actionId}
-              onChange={(e) => {
-                setActionId(e.target.value);
-                setJob(undefined);
-                setResult(undefined);
-              }}
-            >
-              <option value="">Select a backend task</option>
-              {actions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        )}
+        {browseModels && (
+          <>
+            <ModelBrowser
+              selectedId={resolvedModel?.uuid}
+              disabled={busy || !!unfinished}
+              onSelect={(item) =>
+                perform((signal) => selectModel(item.uuid, signal))
+              }
+            />
+            <details>
+              <summary>Open a model by UUID</summary>
+              <label className="cw-catalog-filter">
+                Model UUID
+                <input
+                  disabled={busy || !!unfinished}
+                  value={model}
+                  onChange={(event) => setModel(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="cw-button"
+                disabled={busy || !!unfinished || !model.trim()}
+                onClick={() =>
+                  perform((signal) => selectModel(model.trim(), signal))
+                }
+              >
+                Load model tasks
+              </button>
+            </details>
+          </>
+        )}
+        {resolvedModel && (
+          <ImageModelTaskControls
+            model={resolvedModel}
+            actions={actions}
+            actionId={actionId}
+            onActionChange={(id) => {
+              setActionId(id);
+              setPrompt("");
+              setJob(undefined);
+              setResult(undefined);
+            }}
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            imageName={source?.name}
+            disabled={busy || !!unfinished}
+          />
+        )}
+        <div className="toolbar">
           <button
+            type="button"
             className="cw-button cw-primary"
-            disabled={busy || !action || !source || !!unfinished}
+            disabled={
+              busy ||
+              !action ||
+              !source ||
+              !valid ||
+              !!unfinished ||
+              !resolvedModel ||
+              !!imageModelUnavailableReason(resolvedModel)
+            }
             onClick={() => perform(run)}
           >
             Run selected task
@@ -383,20 +463,32 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
         {job && (
           <div className="panel" aria-label="Model execution">
             <p role="status">Model execution · {job.status}</p>
-            <p><code>{job.uuid}</code></p>
+            <p>
+              <code>{job.uuid}</code>
+            </p>
             <div className="toolbar">
               {monitoring && unfinished && (
-                <button className="cw-button" onClick={() => operation.current?.abort()}>
+                <button
+                  className="cw-button"
+                  onClick={() => operation.current?.abort()}
+                >
                   Stop monitoring
                 </button>
               )}
               {!busy && job.status !== "failed" && (
-                <button className="cw-button" onClick={() => perform((signal) => run(signal, true))}>
+                <button
+                  className="cw-button"
+                  onClick={() => perform((signal) => run(signal, true))}
+                >
                   Resume monitoring
                 </button>
               )}
             </div>
-            <p className="note">Stopping monitoring leaves the server job running. Resuming reads this execution without submitting another task. Keep this image and task selected while reviewing its result.</p>
+            <p className="note">
+              Stopping monitoring leaves the server job running. Resuming reads
+              this execution without submitting another task. Keep this image
+              and task selected while reviewing its result.
+            </p>
           </div>
         )}
         {source && result && (
@@ -418,6 +510,7 @@ function AnnotationWorkbench({ client }: { client: CyberwaveClient }) {
               {result.action.image_annotation?.kind === "boxes" && (
                 <button
                   className="cw-button"
+                  disabled={busy}
                   onClick={() =>
                     setDraft(modelBoxProposals(result.action, result.value))
                   }

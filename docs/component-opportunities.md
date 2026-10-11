@@ -6,20 +6,23 @@ governance pages. The [example catalog](../examples/developer-console/README.md#
 records each page's prerequisites, source and effects. This document proposes next
 increments; the names below are **not existing SDK exports**.
 
+## Completed increment: dataset browsing
+
+`DatasetSampleBrowser` now ships from `@cyberwave/react` and is reused in examples 14/15. It follows `next_after`, filters approved samples, handles errors and source changes, and resets cursors on collection/account changes. The annotation journey locks navigation while edits are pending and refreshes after a successful revisioned review. [Integration and ownership](../packages/react/README.md#browse-dataset-evidence).
+
 ## Prioritize complete journeys
 
 | Priority / proposed component | Observed gap | Reuse / smallest increment | Acceptance boundary |
 | --- | --- | --- | --- |
 | 1 · `EnvironmentTwinPicker` | Examples 16/17 have a shared environment/twin chooser that exists only inside the example. Other applications must recreate that loading and reset logic. | Extract [SensorWorkbench](../examples/developer-console/src/sensor-workbench.tsx) selection using `EnvironmentBrowser`, `environments.twins` and the existing `SensorSelector`; keep viewer/commands as children. | Client/environment changes remove old twins, sensor choice and active child views; delayed responses cannot restore them. Selection never activates a controller. No backend changes. |
-| 1 · `DatasetSampleBrowser` | Example 14 shows only the first 100 samples; example 15 loads only the first sample. Large collections and selecting the next item are incomplete journeys. | Existing `datasets.samples` cursor (`next_after` → `after`), media previews and annotation editor. Start with a paginated controlled picker receiving `datasetId`; do not invent a workspace dataset registry. | Empty/denied/changed-source states, cursor reset on collection/session change, explicit save/discard before leaving a dirty review. Existing sample revision rules remain authoritative. |
 | 1 · `HumanActionInbox` | The action list, decision/detail state and resume UI are embedded in example 14; photo actions still open the platform inbox. | Extract list/detail/response views over `humanActions`; compose existing image capture for photos and host-owned Attachment upload. | Respect backend assignee, deadline and source-change errors. An accepted response is distinct from successful workflow continuation; link its execution. Never auto-approve or resend a different answer. |
-| 2 · Extend `CapturedFrameReview` with a sample handoff composition | Examples 15/16 can review a frame, but choosing a collection and attaching reviewed evidence requires host code. | Combine the existing frame review with the proposed sample picker and an application callback; share a recipe before creating another component. | Retain original twin/sensor/run/time, Attachment/sample UUID and digest. Reconcile partial uploads; a cancelled wait must not imply rollback. Human consent and label approval stay separate. |
+| 2 · Extend `CapturedFrameReview` with a sample handoff composition | Examples 15/16 can review a frame, but choosing a collection and attaching reviewed evidence requires host code. | Combine the existing frame review with host-owned collection selection, `DatasetSampleBrowser` and an application callback; share a recipe before creating another component. | Retain original twin/sensor/run/time, Attachment/sample UUID and digest. Reconcile partial uploads; a cancelled wait must not imply rollback. Human consent and label approval stay separate. |
 | 2 · `InspectionComparison` | Example 09 contains useful before/after uncertainty logic; example 19 exposes stored history but no comparison view. | Existing `inspections.history`, observation details, evidence previews and [comparison rules](../examples/developer-console/src/inspection-domain.ts). Extract a read-only pair view with host-selected observations. | Same stable defect/reference; mismatched units, missing calibration or missing coverage stay non-comparable. Never infer resolution from non-observation. No pixel-to-metre guesses. |
 | 2 · Extend `WorkflowMonitor` with a task timeline | Execution, human waits and inspection results appear on separate screens. A developer needs to explain what is waiting and what to do next. | Add optional render slots/links for existing node executions and outputs. Use application-provided human-action/evidence references; keep native statuses. | No new global activity store. Chronology uses backend times; missing correlation stays explicit. Pause monitoring is distinct from cancelling execution. |
 | 3 · `RecordedClipSelection` | Recording playback has a cursor, while Episode selection is a server recipe. Selecting a training interval is not yet a UI journey. | Extend `RecordingPlaybackPanel` with explicit in/out callbacks and `mediaSecondsToTimestampUs`; use existing Episode/Dataset APIs through the host. | Validate selected source clock and coverage, preserve source ID, and show processing readiness. Do not claim synchronized multi-camera/3D replay. |
 
 The first two are the best next implementation: they remove repeated integration
-work and make existing datasets usable beyond a tiny demo. Implement one component,
+work and connect existing selection and human-action flows without duplicating their APIs. Implement one component,
 use it in at least two current pages, then verify stale requests, empty catalogs,
 permission errors and selection changes. Avoid adding another example page until
 it demonstrates a new journey that existing pages cannot show clearly.
@@ -62,3 +65,5 @@ reference plus a compiled React composition. Navigation, Vite entries, in-page
 guidance and the generated example table now share one catalog checked during the
 build. These checks catch missing pages/source links and catalog drift; they do
 not prove an external producer, recording, training worker or flight is available.
+
+Named dataset/model browsing now reuses the existing generated list routes. `ModelInputSummary` and `ImageModelTaskControls` consume backend contracts. Global catalog search and a general custom-model multimodal form remain separate gaps; page filters and structured image controls do not claim those capabilities.

@@ -8,6 +8,8 @@ export type paths = Omit<ProductionPaths, keyof ExtensionPaths> & ExtensionPaths
 export type HumanAction = ExtensionComponents['schemas']['HumanActionSchema'];
 export type HumanActionResponse = ExtensionComponents['schemas']['HumanActionResponse'];
 export type DatasetSample = ExtensionComponents['schemas']['DatasetSampleSchema'];
+export type Dataset = components['schemas']['DatasetSchema'];
+export type MLModel = components['schemas']['MLModelSchema'];
 export type SampleAnnotation = ExtensionComponents['schemas']['SampleAnnotation'];
 export type WorkflowInputContract = ExtensionComponents['schemas']['WorkflowInputContractSchema'];
 export type Asset = components['schemas']['AssetSchema'];
@@ -122,6 +124,7 @@ export function createCyberwave(options: ClientOptions = {}) {
   const modelExecution = (execution_uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/mlmodels/executions/{execution_uuid}', { params: { path: { execution_uuid } }, ...opts }));
   /** Existing model runs and durable execution records; submission is never retried. */
   const mlmodels = {
+    list: (query: NonNullable<paths['/api/v1/mlmodels']['get']['parameters']['query']> = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/mlmodels', { params: { query }, ...opts })),
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/mlmodels/{uuid}', { params: { path: { uuid } }, ...opts })),
     run: (uuid: string, body: components['schemas']['MLModelRunSchema'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/mlmodels/{uuid}/run', { params: { path: { uuid } }, body, ...opts })),
     execution: modelExecution,
@@ -135,6 +138,7 @@ export function createCyberwave(options: ClientOptions = {}) {
   };
   /** Preview media collections reuse Dataset and Attachment; no separate evidence store. */
   const datasets = {
+    list: (query: NonNullable<paths['/api/v1/datasets']['get']['parameters']['query']> = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/datasets', { params: { query }, ...opts })),
     get: (uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/datasets/{uuid}', { params: { path: { uuid } }, ...opts })),
     createCollection: (body: ExtensionComponents['schemas']['SampleCollectionInput'], opts: ReadOptions = {}) => data(rest.POST('/api/v1/datasets/collections', { body, ...opts })),
     samples: (uuid: string, query: NonNullable<paths['/api/v1/datasets/{uuid}/samples']['get']['parameters']['query']> = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/datasets/{uuid}/samples', { params: { path: { uuid }, query }, ...opts })),

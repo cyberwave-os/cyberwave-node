@@ -71,10 +71,11 @@ export const examples: Example[] = [
     source: "human-evidence.tsx",
     data: "API selected in the header",
     setup:
-      "Preview human-action and dataset-sample routes; assigned action or a media-collection UUID.",
+      "Preview human-action and dataset-sample routes; assigned action or a visible media collection.",
     actions:
-      "Explicit consent/acknowledgement writes to authenticated local APIs. Photo upload uses the platform inbox; gallery shows its first 100 samples.",
-    reuse: "humanActions, datasets; custom inbox/gallery UI",
+      "Explicit consent/acknowledgement writes to authenticated local APIs. Photo upload uses the platform inbox; sample browsing uses backend pagination and an approved-only filter.",
+    reuse:
+      "DatasetBrowser, DatasetSampleBrowser, humanActions, datasets; custom action/detail UI",
   },
   {
     id: 15,
@@ -86,8 +87,9 @@ export const examples: Example[] = [
     setup:
       "Local image works without API credentials. Sample review and model assistance need the matching backend.",
     actions:
-      "Local drawing/export; explicit local-backend review or model run. Inference may consume credits. Loads the first dataset sample.",
-    reuse: "ImageAnnotationEditor, ImageCapture, ModelResultOverlay",
+      "Local drawing/export; explicit local-backend review or model run. Inference may consume credits. Choose datasets and models by name, then a sample and backend image task. Save or discard label edits before changing images.",
+    reuse:
+      "DatasetBrowser, DatasetSampleBrowser, ModelBrowser, ImageModelTaskControls, ImageAnnotationEditor, ImageCapture, ModelResultOverlay",
   },
   {
     id: 1,

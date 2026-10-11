@@ -265,4 +265,4 @@ Accepted asynchronous model jobs can be monitored through `client.mlmodels.waitF
 
 ## Next component opportunities
 
-The [example review and component roadmap](docs/component-opportunities.md) prioritizes a shared environment/twin picker, paginated dataset-sample browser and human-action inbox. These are proposed extractions from existing flows, not shipped exports or new backend models.
+The [example review and component roadmap](docs/component-opportunities.md) records the completed `DatasetSampleBrowser` increment and prioritizes a shared environment/twin picker and human-action inbox. The remaining ideas are proposed extractions from existing flows, not shipped exports or new backend models.

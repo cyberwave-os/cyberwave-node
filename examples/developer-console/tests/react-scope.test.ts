@@ -271,3 +271,197 @@ test('recording panel refreshes materialized sources and drops previous media on
     assert.match(element.textContent!, /Loading playback/);
   });
 });
+
+function datasetSample(uuid: string, extra: Record<string, unknown> = {}) {
+  return {
+    uuid, attachment_uuid: `attachment-${uuid}`, source_sha256: 'a'.repeat(64),
+    source_changed: false, file_url: null, annotations: [], provenance: {},
+    review_status: 'pending', revision: 1, created_at: '2026-10-11T08:00:00Z',
+    reviewed_at: null, reviewed_by_uuid: null, ...extra,
+  };
+}
+
+test('sample browser follows opaque numeric cursors, goes back and restarts an approved filter', async () => {
+  const { DatasetSampleBrowser } = await import('@cyberwave/react');
+  const requests: URL[] = [], selected: string[] = [];
+  const client = createCyberwave({ fetch: async request => {
+    const url = new URL((request as Request).url); requests.push(url);
+    if (url.searchParams.get('approved_only') === 'true') return Response.json({ items: [], next_after: null });
+    const after = url.searchParams.get('after');
+    return Response.json({ items: [datasetSample(after ? 'second-sample' : 'first-sample')], next_after: after ? null : 57 });
+  } });
+  await mounted(async ({ render, click, element }) => {
+    await render(h(CyberwaveProvider, { client, children: h(DatasetSampleBrowser, { datasetId: 'collection', onSelect: value => selected.push(value.uuid) }) }));
+    await click('first-sample'); assert.deepEqual(selected, ['first-sample']);
+    await click('Next samples'); assert.equal(requests.at(-1)?.searchParams.get('after'), '57');
+    assert.match(element.textContent!, /second-sample/); assert.doesNotMatch(element.textContent!, /first-sample/);
+    await click('Previous samples'); assert.equal(requests.at(-1)?.searchParams.has('after'), false);
+    await click('Next samples');
+    await act(async () => (element.querySelector('input[type="checkbox"]') as HTMLInputElement).click());
+    assert.equal(requests.at(-1)?.searchParams.has('after'), false);
+    assert.equal(requests.at(-1)?.searchParams.get('approved_only'), 'true');
+    assert.match(element.textContent!, /Page 1/); assert.match(element.textContent!, /No visible samples/);
+    assert.equal(requests.every(url => url.searchParams.get('limit') === '12'), true);
+  });
+});
+
+test('sample browsing cancels delayed pages and drops cursor state on collection or account changes', async () => {
+  const { DatasetSampleBrowser } = await import('@cyberwave/react');
+  const requests: Request[] = [];
+  let finish: (response: Response) => void = () => {};
+  const client = createCyberwave({ fetch: async request => {
+    requests.push(request as Request);
+    const url = new URL((request as Request).url);
+    if (url.searchParams.has('after')) return new Promise<Response>(resolve => { finish = resolve; });
+    return Response.json({ items: [datasetSample(url.pathname.includes('/first/') ? 'old-evidence' : 'new-evidence')], next_after: 42 });
+  } });
+  const next = createCyberwave({ baseUrl: 'http://localhost:8008', fetch: async request => {
+    requests.push(request as Request); return Response.json({ items: [], next_after: null });
+  } });
+  const view = (value: typeof client, datasetId: string) => h(CyberwaveProvider, { client: value, children: h(DatasetSampleBrowser, { datasetId, onSelect() {} }) });
+  await mounted(async ({ render, click, element }) => {
+    await render(view(client, 'first')); await click('Next samples');
+    const pending = requests.at(-1)!;
+    await render(view(client, 'second'));
+    assert.equal(pending.signal.aborted, true);
+    await act(async () => { finish(Response.json({ items: [datasetSample('late-old-evidence')], next_after: null })); });
+    assert.match(element.textContent!, /new-evidence/); assert.doesNotMatch(element.textContent!, /old-evidence/);
+    assert.equal(new URL(requests.at(-1)!.url).searchParams.has('after'), false);
+    await click('Next samples'); await render(view(next, 'second'));
+    assert.equal(new URL(requests.at(-1)!.url).searchParams.has('after'), false);
+    assert.doesNotMatch(element.textContent!, /new-evidence|old-evidence/);
+  });
+});
+
+test('sample errors allow explicit retry, changed media stays hidden, and host locks prevent selection', async () => {
+  const { DatasetSampleBrowser } = await import('@cyberwave/react');
+  let requests = 0, selections = 0;
+  const client = createCyberwave({ fetch: async () => ++requests === 1
+    ? Response.json({ detail: 'Access denied to this collection' }, { status: 403 })
+    : Response.json({ items: [datasetSample('changed-sample', { source_changed: true, file_url: 'https://example.invalid/private-changed-source.png' })], next_after: null }) });
+  const view = (disabled = false) => h(CyberwaveProvider, { client, children: h(DatasetSampleBrowser, { datasetId: 'collection', disabled, onSelect() { selections++; } }) });
+  await mounted(async ({ render, click, element }) => {
+    await render(view()); assert.match(element.textContent!, /cannot access this resource/); assert.doesNotMatch(element.textContent!, /No visible samples/);
+    await click('Refresh samples'); assert.match(element.textContent!, /Source changed/);
+    assert.equal(element.querySelector('img'), null);
+    await render(view(true));
+    assert.equal(Array.from(element.querySelectorAll('button')).every(button => button.disabled), true);
+    assert.equal((element.querySelector('input') as HTMLInputElement).disabled, true);
+    await act(async () => (element.querySelector('.cw-sample-row') as HTMLButtonElement).click());
+    assert.equal(selections, 0);
+    await render(view()); await click('changed-sample'); assert.equal(selections, 1, 'Host can inspect metadata for unavailable evidence');
+  });
+});
+
+test('sample browser blocks repeated cursors and refreshes an existing page after a host review', async () => {
+  const { DatasetSampleBrowser } = await import('@cyberwave/react');
+  let revision = 1;
+  const requests: URL[] = [];
+  const client = createCyberwave({ fetch: async request => { requests.push(new URL((request as Request).url)); return Response.json({ items: [datasetSample('sample', { revision })], next_after: 29 }); } });
+  const view = (refreshKey: number) => h(CyberwaveProvider, { client, children: h(DatasetSampleBrowser, { datasetId: 'collection', refreshKey, onSelect() {} }) });
+  await mounted(async ({ render, click, element }) => {
+    await render(view(0)); await click('Next samples');
+    assert.match(element.textContent!, /invalid sample cursor/);
+    assert.equal(Array.from(element.querySelectorAll('button')).find(button => button.textContent === 'Next samples')?.disabled, true);
+    revision = 2; await render(view(1));
+    assert.equal(requests.at(-1)?.searchParams.get('after'), '29');
+    assert.match(element.textContent!, /revision 2/);
+  });
+});
+
+test('a delayed camera capture cannot replace a review after the host locks input or the camera stops', async () => {
+  const { ImageCapture } = await import('@cyberwave/react/annotation');
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  let delivered = 0, stopped = 0, encode: (blob: Blob) => void = () => {};
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() { stopped++; } }] }) } } });
+  try {
+    await mounted(async ({ render, click, element }) => {
+      const win = window as unknown as Window & { HTMLMediaElement: typeof HTMLMediaElement; HTMLCanvasElement: typeof HTMLCanvasElement };
+      win.HTMLMediaElement.prototype.play = async () => {};
+      win.HTMLCanvasElement.prototype.getContext = (() => ({ drawImage() {} })) as any;
+      win.HTMLCanvasElement.prototype.toBlob = callback => { encode = callback as (blob: Blob) => void; };
+      const view = (disabled: boolean) => h(ImageCapture, { disabled, onCapture() { delivered++; } });
+      await render(view(false)); await click('Start camera');
+      Object.defineProperties(element.querySelector('video'), { videoWidth: { value: 32 }, videoHeight: { value: 24 }, readyState: { value: 2 } });
+      await click('Capture frame'); await render(view(true));
+      await act(async () => encode(new Blob(['pixels'], { type: 'image/png' })));
+      assert.equal(delivered, 0);
+      await render(view(false)); await click('Capture frame'); await click('Stop camera');
+      await act(async () => encode(new Blob(['pixels'], { type: 'image/png' })));
+      assert.equal(delivered, 0); assert.equal(stopped, 1);
+      assert.equal(Array.from(element.querySelectorAll('button')).find(button => button.textContent === 'Start camera')?.disabled, false);
+    });
+  } finally {
+    if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
+    else Reflect.deleteProperty(globalThis, 'navigator');
+  }
+});
+
+test('dataset catalog uses server pagination, disables episode datasets and resets on account change', async () => {
+  const { DatasetBrowser } = await import('@cyberwave/react');
+  const requests: URL[] = [];
+  let selected = '';
+  const client = createCyberwave({ fetch: async request => {
+    const url = new URL((request as Request).url); requests.push(url);
+    return Response.json({ datasets: [{ uuid: 'photos', name: 'Reviewed photos', metadata: {sample_collection: true}, visibility: 'private' }, {uuid:'episodes',name:'Robot training',metadata:{},visibility:'private'}], has_more: url.searchParams.get('offset') === '0' });
+  } });
+  let oldSignal: AbortSignal | undefined;
+  let resolve: (response: Response) => void = () => {};
+  const delayed = createCyberwave({fetch: request => { oldSignal = (request as Request).signal; return new Promise(done => { resolve = done; }); }});
+  const next = createCyberwave({fetch: async () => Response.json({datasets:[],has_more:false})});
+  await mounted(async ({render, click, element}) => {
+    const view = (value = client) => h(CyberwaveProvider, {client:value, children:h(DatasetBrowser, {collectionsOnly:true, onSelect: item => { selected = item.uuid; }})});
+    await render(view());
+    assert.equal(Array.from(element.querySelectorAll('button')).find(b => b.textContent?.includes('Robot training'))?.disabled, true);
+    await click('Reviewed photos'); assert.equal(selected, 'photos');
+    await click('Next datasets'); assert.equal(requests.at(-1)?.searchParams.get('offset'), '12');
+    assert.equal(Array.from(element.querySelectorAll('button')).find(b => b.textContent === 'Next datasets')?.disabled, true);
+    await render(view(delayed)); await render(view(next));
+    assert.equal(oldSignal?.aborted, true);
+    await act(async () => resolve(Response.json({datasets:[{uuid:'secret',name:'Old account secret'}],has_more:false})));
+    assert.doesNotMatch(element.textContent!, /Old account secret|Reviewed photos/);
+    assert.match(element.textContent!, /Page 1/);
+  });
+});
+
+test('model catalog has look-ahead pagination and keeps unavailable models discoverable', async () => {
+  const { ModelBrowser } = await import('@cyberwave/react');
+  const requests: URL[] = [];
+  let selected = '';
+  const client = createCyberwave({fetch: async request => {
+    const url = new URL((request as Request).url); requests.push(url);
+    const offset = Number(url.searchParams.get('offset'));
+    return Response.json(Array.from({length:offset ? 1 : 13}, (_, index) => ({uuid:`model-${offset+index}`,name:`Named model ${offset+index}`, can_take_image_as_input:true, model_provider_name:'Provider',deployment:'cloud',inference_issue: 'Credential required'})));
+  }});
+  await mounted(async ({render, click, element}) => {
+    await render(h(CyberwaveProvider, {client,children:h(ModelBrowser,{onSelect:item => {selected=item.uuid;}})}));
+    assert.equal(requests[0].searchParams.get('limit'), '13');
+    assert.doesNotMatch(element.textContent!, /Named model 12/);
+    assert.match(element.textContent!, /Credential required/);
+    await click('Next models'); await click('Named model 12'); assert.equal(selected,'model-12');
+    assert.equal(Array.from(element.querySelectorAll('button')).find(b => b.textContent === 'Next models')?.disabled,true);
+  });
+});
+
+test('image task form follows backend task and modality declarations, and does not use custom ports as prompt/image inputs', async () => {
+  const { ImageModelTaskControls } = await import('@cyberwave/react/annotation');
+  const { modelInputTypes } = await import('@cyberwave/react');
+  const model = {uuid:'vision',name:'Vision model',can_take_image_as_input:true,can_take_text_as_input:true,allowed_structured_tasks:['boxes'],required_inputs:[['prompt','image_url']]} as any;
+  const action = {id:'boxes',label:'Find boxes',description:'Describe objects in the selected image.',requires_image:true,image_annotation:{kind:'boxes'},default_prompt_template:'Inspect {target} using backend coordinates.'} as any;
+  await mounted(async ({render,element}) => {
+    const view = (selected = model, disabled = false) => h(ImageModelTaskControls,{model:selected,actions:[action,{...action,id:'not-advertised',label:'Forbidden task'}],actionId:'boxes',onActionChange(){},prompt:'',onPromptChange(){},imageName:'Selected evidence',disabled});
+    await render(view());
+    assert.match(element.textContent!, /Image required: Selected evidence/);
+    assert.match(element.textContent!, /Inspect \{target\}/);
+    assert.doesNotMatch(element.textContent!, /Forbidden task/);
+    assert.ok(element.querySelector('textarea'));
+    await render(view(model,true)); assert.equal(element.querySelector('textarea')?.disabled,true);
+    await render(view({...model,can_take_image_as_input:false}));
+    assert.equal(element.querySelector('textarea'),null); assert.match(element.textContent!, /does not accept images/);
+    const custom = {...model,io_schema:{inputs:[{name:'recording',type:'video',required:true}]}};
+    assert.deepEqual(modelInputTypes(custom),['video']);
+    await render(view(custom)); assert.equal(element.querySelector('textarea'),null);
+    assert.match(element.textContent!, /recording.*video.*required/);
+    assert.match(element.textContent!, /custom-model transport/);
+  });
+});

@@ -100,3 +100,5 @@ export { SensorSelector, LiveSensorTelemetryPanel, useLiveSensorTelemetry } from
 export { ActivityResults, MeasurementCard, EvidencePreview, type ActivityResult } from './activity-results.js';
 export { InspectionCampaignBrowser, useInspectionCampaign, InspectionObservationList, InspectionObservationDetails, type InspectionObservation } from './inspection-browser.js';
 export { RecordingPlaybackPanel } from './recording-playback.js';
+export { DatasetSampleBrowser } from './dataset-samples.js';
+export { DatasetBrowser, ModelBrowser, ModelInputSummary, modelInputTypes } from './data-catalogs.js';

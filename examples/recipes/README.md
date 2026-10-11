@@ -46,7 +46,7 @@ Native Episode-based Dataset creation remains robotics-oriented. The preview bac
 
 `human-actions.ts` lists assigned actions and submits an explicit response through generated REST calls. The backend enforces assignee access, deadlines, idempotency and resume. A photo action first uses the existing Attachment create/upload APIs, then submits its UUID with `decision: "completed"`.
 
-The [interactive example](http://127.0.0.1:5173/human-evidence.html) shows consent/acknowledgement and the first page of sample evidence; the platform inbox also handles photo upload. Start the [developer console](../developer-console/README.md) before opening localhost links. The [training recipe](../training/README.md) exports reviewed images and boxes to YOLO with checksums and reviewer provenance. Use your existing HTTP Request / Run Workflow nodes to dispatch a worker; no extra training node is needed.
+The [interactive example](http://127.0.0.1:5173/human-evidence.html) shows consent/acknowledgement and paginated sample evidence; the platform inbox also handles photo upload. Start the [developer console](../developer-console/README.md) before opening localhost links. The [training recipe](../training/README.md) exports reviewed images and boxes to YOLO with checksums and reviewer provenance. Use your existing HTTP Request / Run Workflow nodes to dispatch a worker; no extra training node is needed.
 
 ## Validation
 

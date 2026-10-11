@@ -49,6 +49,22 @@ the host still owns upload and dataset policy.
 
 `captureVideoFrame(video)` returns a PNG from the decoded frame of an existing camera, recording or WebRTC video element. `mediaTime` is seconds in that media element, not a recording timestamp. Use the track's actual anchor and `mediaSecondsToTimestampUs` when retaining recording provenance. The source must be same-origin or CORS enabled; an overlay is not baked into the captured image. `ImageCapture` requests the camera only on an explicit click and stops owned tracks on stop/unmount. Revoke any object URLs your application creates.
 
+## Select a model and its inputs
+
+Example 15 uses `ModelBrowser` from the main React entry, then `loadImageModelTasks` to retrieve the selected model and canonical task catalog. Users select names; UUID input is tucked into **Open a model by UUID**.
+
+```tsx
+import { ImageModelTaskControls } from '@cyberwave/react/annotation';
+<ImageModelTaskControls model={loaded.model} actions={loaded.actions}
+  actionId={taskId} onActionChange={setTaskId}
+  prompt={prompt} onPromptChange={setPrompt}
+  imageName={selectedImage.name} disabled={submitting || jobUnfinished} />
+```
+
+This controlled form shows the model's accepted modalities and requirements, available image tasks, task description, selected image and optional target prompt. Blank prompt uses the task's backend default; provider-specific templates remain server-side. Changing tasks should clear the host's prompt/result so a prior request cannot be mistaken for the next one. The example locks source/model/task selection until an accepted execution finishes or fails; stopping monitoring does not unlock a running job.
+
+The form is intentionally scoped to the structured image transport. Text-only/audio-only models show why they cannot run here. Models with custom `io_schema` expose their named, typed, required inputs but are not submitted using `image_base64` plus `prompt`; their custom transport must be handled by its adapter. `imageModelUnavailableReason(model)` gives hosts the same guard for the Run button. Models accepting images but advertising no image geometry tasks remain visible with that explanation. No provider list or task IDs are copied into the form.
+
 ## Backend ML adapters remain authoritative
 
 ```ts

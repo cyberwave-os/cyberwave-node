@@ -54,6 +54,8 @@ export function ImageCapture({
   const video = useRef<HTMLVideoElement>(null),
     stream = useRef<MediaStream | null>(null),
     generation = useRef(0);
+  const delivery = useRef({ onCapture, disabled });
+  delivery.current = { onCapture, disabled };
   const [active, setActive] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -63,6 +65,7 @@ export function ImageCapture({
     stream.current = null;
     if (video.current) video.current.srcObject = null;
     setActive(false);
+    setBusy(false);
   };
   useEffect(
     () => () => {
@@ -94,7 +97,7 @@ export function ImageCapture({
         setError((e as Error).message);
       }
     } finally {
-      if (request <= generation.current) setBusy(false);
+      if (request === generation.current) setBusy(false);
     }
   }
   return (
@@ -122,12 +125,16 @@ export function ImageCapture({
           onClick={async () => {
             setBusy(true);
             setError("");
+            const request = generation.current;
             try {
-              onCapture(await captureVideoFrame(video.current!));
+              const frame = await captureVideoFrame(video.current!);
+              if (request === generation.current && !delivery.current.disabled)
+                delivery.current.onCapture(frame);
             } catch (e) {
-              setError((e as Error).message);
+              if (request === generation.current)
+                setError((e as Error).message);
             } finally {
-              setBusy(false);
+              if (request === generation.current) setBusy(false);
             }
           }}
         >

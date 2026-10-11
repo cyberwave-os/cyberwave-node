@@ -5,7 +5,9 @@ import {
   type HumanAction,
   type DatasetSample,
 } from "cyberwave";
+import { DatasetSampleBrowser } from "@cyberwave/react";
 import { ConnectedWorkbench } from "./workbench-connection.tsx";
+import { CollectionPicker } from "./collection-picker.tsx";
 import { mediaUrl } from "./connection.ts";
 import "@cyberwave/react/styles.css";
 import "./workbench.css";
@@ -62,11 +64,10 @@ function EvidenceImage({
 
 function HumanEvidence({ client }: { client: CyberwaveClient }) {
   const [actions, setActions] = useState<HumanAction[]>([]);
-  const [dataset, setDataset] = useState("");
-  const [samples, setSamples] = useState<DatasetSample[]>([]);
+  const [collection, setCollection] = useState({ uuid: "", name: "" });
+  const [sample, setSample] = useState<DatasetSample>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const [note, setNote] = useState("");
   const [selected, setSelected] = useState<HumanAction>();
 
@@ -98,13 +99,10 @@ function HumanEvidence({ client }: { client: CyberwaveClient }) {
   }
   async function respond(decision: "approved" | "rejected" | "completed") {
     if (!selected) return;
-    setSelected(await client.humanActions.respond(selected.uuid, { decision, note }));
+    setSelected(
+      await client.humanActions.respond(selected.uuid, { decision, note }),
+    );
     await loadActions();
-  }
-  async function loadSamples() {
-    const page = await client.datasets.samples(dataset.trim(), { limit: 100 });
-    setSamples(page.items);
-    setLoaded(true);
   }
   return (
     <main className="studio human-evidence">
@@ -127,9 +125,9 @@ function HumanEvidence({ client }: { client: CyberwaveClient }) {
       </div>
       <p className="note">
         This example requires the preview backend. Connect to your local API in
-        the header. Collect photos in the platform's Your actions inbox; edit
-        labels in Dataset → Samples. Changes through this example gateway are
-        local only.
+        the header. Collect photos in the platform's Your actions inbox; browse
+        the collection below and open it in the annotation workbench to review
+        labels. Changes through this example gateway are local only.
       </p>
       {error && (
         <p role="alert" className="cw-error">
@@ -251,64 +249,69 @@ function HumanEvidence({ client }: { client: CyberwaveClient }) {
         </section>
         <section className="panel">
           <h2>Dataset evidence</h2>
-          <div className="fields">
-            <label className="span-2">
-              Dataset UUID
-              <input
-                disabled={busy}
-                value={dataset}
-                onChange={(e) => {
-                  setDataset(e.target.value);
-                  setSamples([]);
-                  setLoaded(false);
-                }}
-                placeholder="Media collection UUID"
-              />
-            </label>
-          </div>
-          <div className="toolbar">
-            <button
-              className="cw-button cw-primary"
-              disabled={busy || !dataset.trim()}
-              onClick={() => perform(loadSamples)}
-            >
-              Load samples
-            </button>
-          </div>
-          <p className="muted compact">
-            Up to 100 samples. The SDK recipe paginates the full collection and
-            exports only approved samples.
-          </p>
-          {loaded && !samples.length && (
-            <p className="muted">No visible samples in this collection.</p>
+          <CollectionPicker
+            value={collection}
+            disabled={busy}
+            onChange={(value) => {
+              setCollection({ uuid: value.uuid, name: value.name || "" });
+              setSample(undefined);
+            }}
+          />
+          {collection.uuid && (
+            <DatasetSampleBrowser
+              datasetId={collection.uuid}
+              selectedId={sample?.uuid}
+              resolveResource={mediaUrl}
+              onSelect={setSample}
+              disabled={busy}
+            />
           )}
-          <div className="cw-resource-list">
-            {samples.map((sample) => (
-              <article className="section-gap" key={sample.uuid}>
-                {sample.file_url && (
-                  <EvidenceImage
-                    url={sample.file_url}
-                    annotations={sample.annotations}
-                  />
-                )}
-                <p>
-                  <span className="tag">{sample.review_status}</span> ·{" "}
-                  {sample.annotations.length}{" "}
-                  {sample.annotations.length === 1 ? "object" : "objects"} ·
-                  revision {sample.revision}
+          {sample && (
+            <article
+              className="section-gap"
+              aria-label="Selected dataset sample"
+            >
+              <h3>Selected evidence</h3>
+              <p className="muted compact">
+                <code>{sample.uuid}</code>
+              </p>
+              {!sample.source_changed && sample.file_url ? (
+                <EvidenceImage
+                  url={sample.file_url}
+                  annotations={sample.annotations}
+                />
+              ) : (
+                <p role="status">
+                  {sample.source_changed
+                    ? "Source changed. This sample is excluded from approved exports."
+                    : "Media is unavailable for this sample."}
                 </p>
-                <p className="muted compact">
-                  {sample.annotations.map((a) => a.label).join(" · ") ||
-                    "No objects labeled"}
-                </p>
-                {sample.source_changed && (
-                  <p role="alert" className="note">
-                    Source changed. This sample is excluded from training.
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
+              )}
+              <p>
+                <span className="tag">{sample.review_status}</span> ·{" "}
+                {sample.annotations.length}{" "}
+                {sample.annotations.length === 1 ? "region" : "regions"} ·
+                revision {sample.revision}
+              </p>
+              <p className="muted compact">
+                {sample.annotations.map((a) => a.label).join(" · ") ||
+                  "No objects labeled"}
+              </p>
+              <p className="muted compact">
+                Source SHA-256: <code>{sample.source_sha256}</code>
+              </p>
+              <a
+                className="studio-link"
+                href={`/image-annotation.html?dataset=${encodeURIComponent(collection.uuid)}`}
+              >
+                Open this collection in the annotation workbench ↗
+              </a>
+              <p className="note">
+                Choose this sample by its UUID in the workbench. The collection
+                link contains no media URL or credentials.
+              </p>
+            </article>
+          )}
         </section>
       </div>
       <section className="panel section-gap">

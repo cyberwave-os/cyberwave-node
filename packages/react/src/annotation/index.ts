@@ -16,3 +16,4 @@ export {
   type ImageMark,
 } from "./model.js";
 export { CapturedFrameReview, type ReviewedFrame } from "./frame-review.js";
+export { ImageModelTaskControls, imageModelUnavailableReason } from "./task-controls.js";

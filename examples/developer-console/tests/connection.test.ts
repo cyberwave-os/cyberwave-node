@@ -166,6 +166,9 @@ test('image model tasks reuse public routes with bounded authenticated local ima
   const calls=[];
   await run(async(url,opts)=>{calls.push({url:String(url),opts});return Response.json({status:'completed'});},async request=>{
     await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com',token:'remote-token'});
+    assert.equal((await request('/gateway/rest/api/v1/mlmodels?limit=13&offset=12')).status,200);
+    assert.equal(calls.at(-1).url, 'https://api.cyberwave.com/api/v1/mlmodels?limit=13&offset=12');
+    assert.equal((await request('/gateway/rest/api/v1/mlmodels','POST',{})).status,405);
     assert.equal((await request('/gateway/rest/api/v1/mlmodels/structured-actions')).status,200);
     assert.equal((await request('/gateway/rest/api/v1/mlmodels/model')).status,200);
     assert.equal((await request('/gateway/rest/api/v1/mlmodels/executions/job')).status,200);
@@ -175,7 +178,7 @@ test('image model tasks reuse public routes with bounded authenticated local ima
     assert.equal((await request('/gateway/rest/api/v1/mlmodels/model/run','POST',{image_base64:'a'.repeat(2*1024*1024)})).status,200);
     assert.equal((await request('/gateway/rest/api/v1/mlmodels/model/run','POST',{image_base64:'a'.repeat(28*1024*1024)})).status,413);
     assert.equal((await request('/gateway/rest/api/v1/datasets/d/samples/s/review','POST',{padding:'a'.repeat(2*1024*1024)})).status,413);
-    assert.equal(calls.length,4);assert.equal(calls.at(-1).opts.headers.Authorization,'Bearer local-only-secret');
+    assert.equal(calls.length,5);assert.equal(calls.at(-1).opts.headers.Authorization,'Bearer local-only-secret');
   });
 });
 

@@ -15,6 +15,8 @@ Start with an application-owned session and one `createCyberwave` client per API
 | Inspect stored samples from one sensor | `twins.telemetry`, `useSensorTelemetry`, `SensorTelemetryPanel` | [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) |
 | Receive sensor packets immediately | `subscribeSensorTelemetry` with a host-owned subscription transport | Live panel in [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) |
 | Review an existing recording | `RecordingBrowser`, `RecordingPlaybackPanel` (or the playback hook/player) | [10 · Recording review](http://127.0.0.1:5173/recording-review.html) |
+| Select models and understand their inputs | `ModelBrowser`, `ModelInputSummary`, `ImageModelTaskControls`, backend task catalog | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) |
+| Browse and select dataset evidence | `DatasetBrowser`, `DatasetSampleBrowser`, `datasets.list`, `datasets.samples`, host-owned review selection | [14 · Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) and [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) |
 | Capture and annotate evidence | `captureVideoFrame`, `ImageAnnotationEditor`, backend ML task schemas, `datasets` | [15 · Capture & annotation](http://127.0.0.1:5173/image-annotation.html) |
 | Plan and monitor work | `WorkflowCatalog`, `WorkflowPlanner`, `WorkflowMonitor` | [11 · Workflows & schedules](http://127.0.0.1:5173/mission-library.html) |
 | Request human input and resume a run | Existing human-action endpoints and dataset samples | [14 · Human actions & evidence](http://127.0.0.1:5173/human-evidence.html) |
@@ -253,4 +255,4 @@ Follow the [GIS operations integration guide](gis-operations.md) for optional Ce
 
 ## Component reference and complete composition
 
-Use the [React component reference](../packages/react/README.md) for entry points, required provider/client props and ownership boundaries. The [typed camera → capture → review recipe](../examples/developer-console/src/recipes/camera-review.tsx) includes imports, session-scoped state and original capture provenance. It is checked by the examples build. The [component roadmap](component-opportunities.md) distinguishes available pieces from proposed extractions for sample browsing, human actions and inspection comparison.
+Use the [React component reference](../packages/react/README.md) for entry points, required provider/client props and ownership boundaries. The [typed camera → capture → review recipe](../examples/developer-console/src/recipes/camera-review.tsx) includes imports, session-scoped state and original capture provenance. It is checked by the examples build. The [component roadmap](component-opportunities.md) distinguishes available pieces from proposed extractions for sample upload handoff, human actions and inspection comparison.
