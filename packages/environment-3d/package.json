@@ -1,0 +1,37 @@
+{
+  "name": "@cyberwave/environment-3d",
+  "version": "0.1.0",
+  "description": "Read-only Three.js environment and robot rendering for Cyberwave",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cyberwave-os/cyberwave-node.git",
+    "directory": "packages/environment-3d"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "cyberwave": "workspace:^",
+    "three": "0.180.0",
+    "urdf-loader": "0.12.6"
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "@types/three": "0.180.0"
+  }
+}

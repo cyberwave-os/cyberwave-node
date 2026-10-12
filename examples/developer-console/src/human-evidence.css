@@ -1,0 +1,28 @@
+.human-evidence .cw-resource {
+  justify-content: space-between;
+}
+.human-evidence .cw-resource .tag {
+  flex-shrink: 0;
+}
+.human-evidence-image {
+  position: relative;
+  max-width: 640px;
+  margin: 16px auto;
+}
+.human-evidence-image img {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+}
+.human-evidence-image svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.human-evidence-image rect {
+  fill: transparent;
+  stroke: #71e4d0;
+  stroke-width: 2px;
+}

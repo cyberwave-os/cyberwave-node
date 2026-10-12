@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cyberwave × Cesium navigation drafts</title></head>
+<body><main>
+<aside>
+  <p class="eyebrow">Custom developer application</p>
+  <h1>Cyberwave × Cesium</h1>
+  <p id="mode">Loading environment…</p>
+  <label for="twin">Target twin</label><select id="twin"></select>
+  <p id="pose" class="muted"></p>
+  <h2>Waypoints</h2>
+  <p class="muted">Select an orange waypoint or a point on the globe. Add it to the draft explicitly.</p>
+  <div id="saved"></div>
+  <p id="selection">No point selected.</p>
+  <button id="append" disabled>Add selected point</button>
+  <h2>Navigation draft</h2><ol id="draft"></ol>
+  <div class="row"><button id="clear">Clear</button><button id="focus">Focus route</button></div>
+  <div class="row"><button id="validate">Validate locally</button><button id="execute" disabled>Start navigation</button></div>
+  <p class="muted">Validation here checks the draft shape. Cyberwave validates capabilities and execution when dispatching.</p>
+  <p id="execution">No execution submitted.</p><button id="cancel" disabled>Cancel execution</button>
+  <h2>Camera</h2><button id="frame">Load latest frame</button>
+  <p class="muted">Authenticated snapshot; WebRTC streaming is a future SDK adapter.</p>
+  <img id="camera" alt="Latest camera frame" hidden />
+  <p id="status" role="status" aria-live="polite"></p>
+</aside>
+<section id="map" aria-label="Cesium GIS map"></section>
+</main><script>window.CESIUM_BASE_URL = '/cesium/';</script>
+<script type="module" src="/src/main.ts"></script><script type="module" src="/src/example-shell.ts"></script></body></html>

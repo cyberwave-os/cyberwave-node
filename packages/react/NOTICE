@@ -1,0 +1,14 @@
+Cyberwave JavaScript SDK
+Copyright 2025-2026 Cyberwave S.p.a.
+
+Extends the official cyberwave-os/cyberwave-node SDK originally authored by
+Vittorio ErLapso Banfi. The package retains the Apache-2.0 license declared
+by that repository and the published cyberwave npm package.
+
+Robot meshes, textures, and environment data fetched by examples are not
+included in this distribution. Their respective owners' licenses apply.
+
+Optional image annotation uses Annotorious 3.9.4 (BSD-3-Clause) and Ajv 8.17.1
+(MIT), as dependencies distributed under their own licenses. See their installed
+LICENSE files and https://github.com/annotorious/annotorious. No third-party
+source is vendored into this package.

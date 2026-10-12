@@ -1,0 +1,4072 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cyberwave development extensions",
+    "version": "0.1.0-preview",
+    "description": "Development endpoints and workflow pagination overrides; deployment availability must be checked separately."
+  },
+  "paths": {
+    "/api/v1/twins/{uuid}/telemetry": {
+      "get": {
+        "operationId": "src_app_api_twins_get_twin_telemetry",
+        "summary": "Get Twin Telemetry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "event_types",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Types"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "sensor_id",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sensor Id"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "default": "asc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwinTelemetryQueryResponseSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get persisted telemetry rows for a twin.\n\nQuery params:\n- start: inclusive start datetime (ISO format)\n- end: inclusive end datetime (ISO format)\n- event_types: optional comma-separated TelemetryEvent values\n- sensor_id: exact metadata.sensor_id; unlabelled twin-wide events are excluded\n- limit: max rows to return (default 100, max 10000)\n- offset: number of rows to skip\n- order: \"asc\" from the start of the window, \"desc\" from its end\n\n``order`` decides which rows a narrow ``limit`` keeps as well as how they\nare sorted. A live view polling a rolling 24h window wants ``desc``:\nunder ``asc`` the cap is spent on the oldest rows and nothing recent\ncomes back.",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/twins/{uuid}/video-sessions": {
+      "post": {
+        "operationId": "src_app_api_twin_video_open_twin_video_session",
+        "summary": "Open Twin Video Session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwinVideoSessionSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Watch an existing producer; never start a camera, recording or controller.\n\nThe browser gathers ICE before submitting. Media flows directly from the SFU.\n409 means no matching producer, 502 refused negotiation, 504 signaling timeout.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwinVideoSessionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/twins/{uuid}/video-sessions/{session_id}/close": {
+      "post": {
+        "operationId": "src_app_api_twin_video_close_twin_video_session",
+        "summary": "Close Twin Video Session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "description": "Idempotent best-effort release of an owned viewer, even after read revocation.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwinVideoCloseInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-actions": {
+      "get": {
+        "operationId": "src_app_api_workflow_actions_list_workflow_actions",
+        "summary": "List Workflow Actions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workspace Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HumanActionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Workflow actions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-actions/{uuid}": {
+      "get": {
+        "operationId": "src_app_api_workflow_actions_get_workflow_action",
+        "summary": "Get Workflow Action",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HumanActionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Workflow actions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-actions/{uuid}/respond": {
+      "post": {
+        "operationId": "src_app_api_workflow_actions_respond_workflow_action",
+        "summary": "Respond Workflow Action",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HumanActionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Workflow actions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HumanActionResponse"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflows": {
+      "get": {
+        "operationId": "src_app_api_workflows_list_workflows",
+        "summary": "List Workflows",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "workspace_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workspace Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "environment_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Environment Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "trigger_type",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger Type"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "related_twin_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Related Twin Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "run_on_edge",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run On Edge"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "slug",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Slug"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "is_template",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Template"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "List all workflows visible to the authenticated user (respects ACL).",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "src_app_api_workflows_create_workflow",
+        "summary": "Create Workflow",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Create a new workflow.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowCreateSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflows/{uuid}/input-contract": {
+      "get": {
+        "operationId": "src_app_api_workflows_get_workflow_input_contract",
+        "summary": "Get Workflow Input Contract",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowInputContractSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Typed editable defaults from the existing template metadata and node registry.\n\nPermission flags are hints, not authorization: mutations recheck ACLs and\nruntime preconditions. Dynamic bindings are deliberately excluded.",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflows/{uuid}/executions": {
+      "get": {
+        "operationId": "src_app_api_workflows_list_workflow_executions",
+        "summary": "List Workflow Executions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowExecutionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "List all executions for a workflow.",
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mlmodels/structured-actions": {
+      "get": {
+        "operationId": "src_app_api_mlmodels_list_structured_actions",
+        "summary": "List Structured Actions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StructuredActionCatalogSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return the canonical catalog of playground ``structured_task`` values.\n\nServes as the machine-readable doc consumed by the Python SDK and the\nfrontend so everyone shares one source of truth for action ids, default\nprompts, and output schemas. See\n``src.lib.structured_actions`` for the authoring surface."
+      }
+    },
+    "/api/v1/datasets/collections": {
+      "post": {
+        "operationId": "src_app_api_dataset_samples_create_sample_collection",
+        "summary": "Create Sample Collection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSchema"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleCollectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/datasets/{uuid}/samples": {
+      "post": {
+        "operationId": "src_app_api_dataset_samples_append_dataset_sample",
+        "summary": "Append Dataset Sample",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSampleSchema"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleAppendInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "src_app_api_dataset_samples_list_dataset_samples",
+        "summary": "List Dataset Samples",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "default": 0,
+              "title": "After",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "approved_only",
+            "schema": {
+              "default": false,
+              "title": "Approved Only",
+              "type": "boolean"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSamplesPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/datasets/{uuid}/samples/{sample_uuid}/review": {
+      "post": {
+        "operationId": "src_app_api_dataset_samples_review_dataset_sample",
+        "summary": "Review Dataset Sample",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "sample_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Sample Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSampleSchema"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleReviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/evidence-collections": {
+      "post": {
+        "operationId": "src_app_api_evidence_import_evidence_collection",
+        "summary": "Import Evidence Collection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceCollectionDetailSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Atomically import metadata; repeat the same external_id and body to retry.\n\nChanges require a new collection external_id. Existing source records and\nreview revisions are never overwritten by an import.",
+        "tags": [
+          "Evidence"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportEvidenceCollectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "src_app_api_evidence_list_evidence_collections",
+        "summary": "List Evidence Collections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvidenceCollectionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Evidence"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/evidence-collections/{collection_uuid}": {
+      "get": {
+        "operationId": "src_app_api_evidence_get_evidence_collection",
+        "summary": "Get Evidence Collection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "collection_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Collection Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceCollectionDetailSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Evidence"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/evidence-subjects/{subject_uuid}/records": {
+      "get": {
+        "operationId": "src_app_api_evidence_get_evidence_subject_history",
+        "summary": "Get Evidence Subject History",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "subject_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Subject Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvidenceRecordSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Evidence"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/evidence-records/{record_uuid}/reviews": {
+      "post": {
+        "operationId": "src_app_api_evidence_review_evidence_record",
+        "summary": "Review Evidence Record",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "record_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Record Uuid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceReviewSchema"
+                }
+              }
+            }
+          }
+        },
+        "description": "Append a review using optimistic concurrency; retries return the same revision.",
+        "tags": [
+          "Evidence"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEvidenceReviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/environments/{uuid}/missions": {
+      "get": {
+        "operationId": "src_app_api_missions_list_environment_missions",
+        "summary": "List Environment Missions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uuid",
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MissionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Discover definitions assigned to visible twins currently in an environment.\n\nThis is a read projection, not a new mission owner or a multi-environment plan.\nExecutions (including scheduled runs) remain nested under each mission.",
+        "tags": [
+          "Missions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/missions": {
+      "get": {
+        "operationId": "src_app_api_missions_list_workspace_missions",
+        "summary": "List Workspace Missions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "environment_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Environment Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "twin_uuid",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Twin Uuid"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MissionSchema"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Workspace governance view, scoped to the target twin and caller's access.",
+        "tags": [
+          "Missions"
+        ],
+        "security": [
+          {
+            "CustomTokenAuthentication": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TwinVideoSessionInput": {
+        "properties": {
+          "sdp_offer": {
+            "maxLength": 65536,
+            "title": "Sdp Offer",
+            "type": "string"
+          },
+          "sensor_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Sensor Id",
+            "type": "string"
+          },
+          "stream_source": {
+            "default": "live",
+            "enum": [
+              "live",
+              "simulation"
+            ],
+            "title": "Stream Source",
+            "type": "string"
+          },
+          "stream_instance_id": {
+            "default": "default",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Stream Instance Id",
+            "type": "string"
+          },
+          "frontend_type": {
+            "default": "rgb",
+            "enum": [
+              "rgb",
+              "depth"
+            ],
+            "title": "Frontend Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sdp_offer",
+          "sensor_id"
+        ],
+        "title": "TwinVideoSessionInput",
+        "type": "object"
+      },
+      "TwinVideoCloseInput": {
+        "properties": {
+          "close_token": {
+            "maxLength": 2048,
+            "title": "Close Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "close_token"
+        ],
+        "title": "TwinVideoCloseInput",
+        "type": "object"
+      },
+      "HumanActionResponse": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected",
+              "completed"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Note",
+            "type": "string"
+          },
+          "attachment_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Uuid"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "HumanActionResponse",
+        "type": "object"
+      },
+      "WorkflowCreateSchema": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "is_active": {
+            "default": false,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          },
+          "run_on_edge": {
+            "default": false,
+            "title": "Run On Edge",
+            "type": "boolean"
+          },
+          "allow_concurrent_executions": {
+            "default": false,
+            "title": "Allow Concurrent Executions",
+            "type": "boolean"
+          },
+          "concurrency_blocked_by_workflow_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Concurrency Blocked By Workflow Uuids",
+            "type": "array"
+          },
+          "execution_target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Target"
+          },
+          "cyberwave_log": {
+            "anyOf": [
+              {
+                "enum": [
+                  "all",
+                  "errors",
+                  "none"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cyberwave Log"
+          },
+          "visibility": {
+            "default": "private",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "is_template": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Template"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "WorkflowCreateSchema",
+        "type": "object"
+      },
+      "SampleCollectionInput": {
+        "properties": {
+          "name": {
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Name",
+            "type": "string"
+          },
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SampleCollectionInput",
+        "type": "object"
+      },
+      "SampleAppendInput": {
+        "properties": {
+          "attachment_uuid": {
+            "format": "uuid",
+            "title": "Attachment Uuid",
+            "type": "string"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/SampleAnnotation"
+            },
+            "maxItems": 500,
+            "title": "Annotations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attachment_uuid"
+        ],
+        "title": "SampleAppendInput",
+        "type": "object"
+      },
+      "SampleReviewInput": {
+        "properties": {
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/SampleAnnotation"
+            },
+            "maxItems": 500,
+            "title": "Annotations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "revision",
+          "status"
+        ],
+        "title": "SampleReviewInput",
+        "type": "object"
+      },
+      "ImportEvidenceCollectionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "external_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "External Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "asset_reference": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Asset Reference",
+            "type": "string"
+          },
+          "reference_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Reference Version",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "limitations": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Limitations",
+            "type": "string"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRecordInput"
+            },
+            "maxItems": 1000,
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "external_id",
+          "name",
+          "asset_reference",
+          "reference_version",
+          "records"
+        ],
+        "title": "ImportEvidenceCollectionInput",
+        "type": "object"
+      },
+      "CreateEvidenceReviewInput": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/EvidenceAssessmentInput"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "idempotency_key",
+          "reason",
+          "assessment"
+        ],
+        "title": "CreateEvidenceReviewInput",
+        "type": "object"
+      },
+      "TwinTelemetryQueryResponseSchema": {
+        "description": "Paginated response for generic twin telemetry rows.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TwinTelemetryRecordSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "has_more"
+        ],
+        "title": "TwinTelemetryQueryResponseSchema",
+        "type": "object"
+      },
+      "TwinVideoSessionSchema": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "sdp_answer": {
+            "title": "Sdp Answer",
+            "type": "string"
+          },
+          "close_token": {
+            "title": "Close Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "sdp_answer",
+          "close_token"
+        ],
+        "title": "TwinVideoSessionSchema",
+        "type": "object"
+      },
+      "HumanActionSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "format": "uuid",
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "execution_uuid": {
+            "format": "uuid",
+            "title": "Execution Uuid",
+            "type": "string"
+          },
+          "workspace_uuid": {
+            "format": "uuid",
+            "title": "Workspace Uuid",
+            "type": "string"
+          },
+          "workflow_name": {
+            "title": "Workflow Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "instructions": {
+            "title": "Instructions",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "attachment_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Uuid"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "source_changed": {
+            "title": "Source Changed",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          },
+          "notification_sent": {
+            "title": "Notification Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "execution_uuid",
+          "workspace_uuid",
+          "workflow_name",
+          "title",
+          "instructions",
+          "kind",
+          "status",
+          "attachment_uuid",
+          "file_url",
+          "source_changed",
+          "expires_at",
+          "response",
+          "notification_sent"
+        ],
+        "title": "HumanActionSchema",
+        "type": "object"
+      },
+      "WorkflowSchema": {
+        "description": "Workflow schema.",
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "workspace_uuid": {
+            "title": "Workspace Uuid",
+            "type": "string"
+          },
+          "workspace_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Name"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          },
+          "environment_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Name"
+          },
+          "run_on_edge": {
+            "title": "Run On Edge",
+            "type": "boolean"
+          },
+          "allow_concurrent_executions": {
+            "default": false,
+            "title": "Allow Concurrent Executions",
+            "type": "boolean"
+          },
+          "concurrency_blocked_by_workflow_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Concurrency Blocked By Workflow Uuids",
+            "type": "array"
+          },
+          "execution_target": {
+            "title": "Execution Target",
+            "type": "string"
+          },
+          "cyberwave_log": {
+            "enum": [
+              "all",
+              "errors",
+              "none"
+            ],
+            "title": "Cyberwave Log",
+            "type": "string"
+          },
+          "visibility": {
+            "title": "Visibility",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "is_template": {
+            "default": false,
+            "title": "Is Template",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "has_worker_source_override": {
+            "default": false,
+            "title": "Has Worker Source Override",
+            "type": "boolean"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowNodeSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes"
+          },
+          "connections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowConnectionSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connections"
+          }
+        },
+        "required": [
+          "uuid",
+          "slug",
+          "name",
+          "description",
+          "is_active",
+          "workspace_uuid",
+          "run_on_edge",
+          "execution_target",
+          "cyberwave_log",
+          "visibility",
+          "created_at",
+          "updated_at",
+          "metadata"
+        ],
+        "title": "WorkflowSchema",
+        "type": "object"
+      },
+      "WorkflowInputContractSchema": {
+        "properties": {
+          "workflow_uuid": {
+            "format": "uuid",
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_execute": {
+            "title": "Can Execute",
+            "type": "boolean"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowInputFieldSchema"
+            },
+            "title": "Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "workflow_uuid",
+          "can_edit",
+          "can_execute",
+          "fields"
+        ],
+        "title": "WorkflowInputContractSchema",
+        "type": "object"
+      },
+      "StructuredActionCatalogSchema": {
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "semantics_version": {
+            "title": "Semantics Version",
+            "type": "integer"
+          },
+          "capability_tags": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Capability Tags",
+            "type": "object"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/StructuredImageActionSchema"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "semantics_version",
+          "capability_tags",
+          "actions"
+        ],
+        "title": "StructuredActionCatalogSchema",
+        "type": "object"
+      },
+      "DatasetSchema": {
+        "properties": {
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          },
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "episodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Episodes",
+            "type": "array"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "processed_datasets": {
+            "items": {
+              "$ref": "#/components/schemas/ProcessedDatasetSchema"
+            },
+            "title": "Processed Datasets",
+            "type": "array"
+          },
+          "processing_status": {
+            "title": "Processing Status",
+            "type": "string"
+          },
+          "is_ready": {
+            "title": "Is Ready",
+            "type": "boolean"
+          },
+          "is_imported": {
+            "default": false,
+            "title": "Is Imported",
+            "type": "boolean"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Format"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "visibility": {
+            "default": "private",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "total_episodes": {
+            "title": "Total Episodes",
+            "type": "integer"
+          },
+          "processed_episodes": {
+            "title": "Processed Episodes",
+            "type": "integer"
+          },
+          "failed_episodes": {
+            "title": "Failed Episodes",
+            "type": "integer"
+          },
+          "failed_episode_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Episode Uuids",
+            "type": "array"
+          },
+          "failed_details": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Failed Details",
+            "type": "array"
+          },
+          "skipped_episodes": {
+            "default": 0,
+            "title": "Skipped Episodes",
+            "type": "integer"
+          },
+          "skipped_episode_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped Episode Uuids",
+            "type": "array"
+          },
+          "waiting_on_recordings_episode_uuids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Waiting On Recordings Episode Uuids",
+            "type": "array"
+          },
+          "cameras": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cameras"
+          },
+          "fps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fps"
+          },
+          "robot_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Robot Type"
+          },
+          "action_dim": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Dim"
+          },
+          "state_dim": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Dim"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "required": [
+          "uuid",
+          "episodes",
+          "metadata",
+          "processed_datasets",
+          "processing_status",
+          "is_ready",
+          "total_episodes",
+          "processed_episodes",
+          "failed_episodes",
+          "failed_episode_uuids",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DatasetSchema",
+        "type": "object"
+      },
+      "DatasetSampleSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "attachment_uuid": {
+            "format": "uuid",
+            "title": "Attachment Uuid",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "source_changed": {
+            "title": "Source Changed",
+            "type": "boolean"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/SampleAnnotation"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Uuid"
+          }
+        },
+        "required": [
+          "uuid",
+          "attachment_uuid",
+          "source_sha256",
+          "source_changed",
+          "file_url",
+          "annotations",
+          "provenance",
+          "review_status",
+          "revision",
+          "created_at",
+          "reviewed_at",
+          "reviewed_by_uuid"
+        ],
+        "title": "DatasetSampleSchema",
+        "type": "object"
+      },
+      "DatasetSamplesPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetSampleSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After"
+          }
+        },
+        "required": [
+          "items",
+          "next_after"
+        ],
+        "title": "DatasetSamplesPage",
+        "type": "object"
+      },
+      "EvidenceCollectionDetailSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "asset_reference": {
+            "title": "Asset Reference",
+            "type": "string"
+          },
+          "reference_version": {
+            "title": "Reference Version",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "limitations": {
+            "title": "Limitations",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRecordSchema"
+            },
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "uuid",
+          "external_id",
+          "name",
+          "asset_reference",
+          "reference_version",
+          "coverage",
+          "limitations",
+          "created_at",
+          "records"
+        ],
+        "title": "EvidenceCollectionDetailSchema",
+        "type": "object"
+      },
+      "EvidenceReviewSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/EvidenceAssessmentInput"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "created_by_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Uuid"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "revision",
+          "assessment",
+          "reason",
+          "created_by_uuid",
+          "created_at"
+        ],
+        "title": "EvidenceReviewSchema",
+        "type": "object"
+      },
+      "WorkflowExecutionSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "triggered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered By"
+          },
+          "trigger_data": {
+            "additionalProperties": true,
+            "title": "Trigger Data",
+            "type": "object"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "error_message": {
+            "title": "Error Message",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "node_executions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowNodeExecutionSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Executions"
+          },
+          "workflow_name": {
+            "default": "",
+            "title": "Workflow Name",
+            "type": "string"
+          },
+          "workflow_slug": {
+            "default": "",
+            "title": "Workflow Slug",
+            "type": "string"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowExecutionProgressSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowExecutionPendingReasonSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "status",
+          "triggered_by",
+          "trigger_data",
+          "started_at",
+          "finished_at",
+          "error_message",
+          "metadata"
+        ],
+        "title": "WorkflowExecutionSchema",
+        "type": "object"
+      },
+      "EvidenceCollectionSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "asset_reference": {
+            "title": "Asset Reference",
+            "type": "string"
+          },
+          "reference_version": {
+            "title": "Reference Version",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "limitations": {
+            "title": "Limitations",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "external_id",
+          "name",
+          "asset_reference",
+          "reference_version",
+          "coverage",
+          "limitations",
+          "created_at"
+        ],
+        "title": "EvidenceCollectionSchema",
+        "type": "object"
+      },
+      "EvidenceRecordSchema": {
+        "properties": {
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "collection_uuid": {
+            "format": "uuid",
+            "title": "Collection Uuid",
+            "type": "string"
+          },
+          "subject_uuid": {
+            "format": "uuid",
+            "title": "Subject Uuid",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EvidenceRecordInput"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceReviewSchema"
+            },
+            "title": "Reviews",
+            "type": "array"
+          }
+        },
+        "required": [
+          "uuid",
+          "collection_uuid",
+          "subject_uuid",
+          "source",
+          "reviews"
+        ],
+        "title": "EvidenceRecordSchema",
+        "type": "object"
+      },
+      "MissionSchema": {
+        "description": "Schema for Mission definition response.",
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "twin_uuid": {
+            "title": "Twin Uuid",
+            "type": "string"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          },
+          "workspace_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Uuid"
+          },
+          "task_sequence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Task Sequence",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "name",
+          "description",
+          "twin_uuid",
+          "task_sequence",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MissionSchema",
+        "type": "object"
+      },
+      "EvidenceAssessmentInput": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "validated",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "priority": {
+            "enum": [
+              "routine",
+              "planned",
+              "urgent"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "technical_state": {
+            "enum": [
+              "new",
+              "stable",
+              "worsened",
+              "improved",
+              "resolved",
+              "not-assessable"
+            ],
+            "title": "Technical State",
+            "type": "string"
+          },
+          "verification_of_review_uuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Of Review Uuid"
+          },
+          "work_order_reference": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Order Reference"
+          }
+        },
+        "required": [
+          "decision",
+          "severity",
+          "priority",
+          "technical_state"
+        ],
+        "title": "EvidenceAssessmentInput",
+        "type": "object"
+      },
+      "SampleAnnotation": {
+        "properties": {
+          "label": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox",
+            "type": "array"
+          },
+          "polygon": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "maxItems": 128,
+                "minItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polygon"
+          }
+        },
+        "required": [
+          "label",
+          "bbox"
+        ],
+        "title": "SampleAnnotation",
+        "type": "object"
+      },
+      "EvidenceRecordInput": {
+        "additionalProperties": false,
+        "properties": {
+          "external_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "External Id",
+            "type": "string"
+          },
+          "subject_external_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Subject External Id",
+            "type": "string"
+          },
+          "kind": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "observed": {
+            "default": true,
+            "title": "Observed",
+            "type": "boolean"
+          },
+          "target_covered": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Covered"
+          },
+          "chainage_m": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chainage M"
+          },
+          "location_precision_m": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Precision M"
+          },
+          "limitation": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Limitation",
+            "type": "string"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceReferenceInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceMeasurementInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "model_run_reference": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Run Reference"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          }
+        },
+        "required": [
+          "external_id",
+          "subject_external_id",
+          "kind"
+        ],
+        "title": "EvidenceRecordInput",
+        "type": "object"
+      },
+      "TwinTelemetryRecordSchema": {
+        "description": "Schema for generic persisted twin telemetry rows.",
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "twin_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Twin Uuid"
+          },
+          "environment_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment Uuid"
+          }
+        },
+        "required": [
+          "uuid",
+          "timestamp",
+          "event_type",
+          "metadata"
+        ],
+        "title": "TwinTelemetryRecordSchema",
+        "type": "object"
+      },
+      "WorkflowInputFieldSchema": {
+        "properties": {
+          "node_uuid": {
+            "format": "uuid",
+            "title": "Node Uuid",
+            "type": "string"
+          },
+          "node_name": {
+            "title": "Node Name",
+            "type": "string"
+          },
+          "node_updated_at": {
+            "title": "Node Updated At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "allowed_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Types",
+            "type": "array"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowInputOptionSchema"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "source": {
+            "enum": [
+              "parameter",
+              "mapping"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_uuid",
+          "node_name",
+          "node_updated_at",
+          "name",
+          "label",
+          "description",
+          "type",
+          "allowed_types",
+          "required",
+          "options",
+          "source"
+        ],
+        "title": "WorkflowInputFieldSchema",
+        "type": "object"
+      },
+      "StructuredImageActionSchema": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "output_format": {
+            "title": "Output Format",
+            "type": "string"
+          },
+          "output_schema": {
+            "additionalProperties": true,
+            "title": "Output Schema",
+            "type": "object"
+          },
+          "output_semantics": {
+            "additionalProperties": true,
+            "title": "Output Semantics",
+            "type": "object"
+          },
+          "image_annotation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageAnnotationContractSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "default_prompt_template": {
+            "title": "Default Prompt Template",
+            "type": "string"
+          },
+          "per_model_prompt_templates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Per Model Prompt Templates",
+            "type": "object"
+          },
+          "requires_image": {
+            "title": "Requires Image",
+            "type": "boolean"
+          },
+          "capability_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Tag"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "description",
+          "output_format",
+          "output_schema",
+          "output_semantics",
+          "default_prompt_template",
+          "per_model_prompt_templates",
+          "requires_image"
+        ],
+        "title": "StructuredImageActionSchema",
+        "type": "object"
+      },
+      "ProcessedDatasetSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "error_message": {
+            "title": "Error Message",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "format",
+          "status",
+          "path",
+          "error_message",
+          "metadata",
+          "created_at"
+        ],
+        "title": "ProcessedDatasetSchema",
+        "type": "object"
+      },
+      "WorkflowNodeSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node_type": {
+            "title": "Node Type",
+            "type": "string"
+          },
+          "node_subtype": {
+            "title": "Node Subtype",
+            "type": "string"
+          },
+          "trigger_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Type"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "position_x": {
+            "title": "Position X",
+            "type": "number"
+          },
+          "position_y": {
+            "title": "Position Y",
+            "type": "number"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "is_disabled": {
+            "title": "Is Disabled",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "supports_model_task_binding": {
+            "default": false,
+            "title": "Supports Model Task Binding",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "name",
+          "node_type",
+          "node_subtype",
+          "trigger_type",
+          "parameters",
+          "position_x",
+          "position_y",
+          "notes",
+          "is_disabled",
+          "created_at",
+          "updated_at",
+          "metadata"
+        ],
+        "title": "WorkflowNodeSchema",
+        "type": "object"
+      },
+      "WorkflowConnectionSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workflow_uuid": {
+            "title": "Workflow Uuid",
+            "type": "string"
+          },
+          "source_node_uuid": {
+            "title": "Source Node Uuid",
+            "type": "string"
+          },
+          "target_node_uuid": {
+            "title": "Target Node Uuid",
+            "type": "string"
+          },
+          "source_output": {
+            "title": "Source Output",
+            "type": "string"
+          },
+          "target_input": {
+            "title": "Target Input",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          }
+        },
+        "required": [
+          "uuid",
+          "workflow_uuid",
+          "source_node_uuid",
+          "target_node_uuid",
+          "source_output",
+          "target_input",
+          "created_at",
+          "metadata"
+        ],
+        "title": "WorkflowConnectionSchema",
+        "type": "object"
+      },
+      "WorkflowExecutionProgressSchema": {
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "source": {
+            "const": "recorded_node_activations",
+            "title": "Source",
+            "type": "string"
+          },
+          "label_source": {
+            "const": "current_workflow_definition",
+            "title": "Label Source",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowProgressStepSchema"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "source",
+          "label_source",
+          "truncated",
+          "steps"
+        ],
+        "title": "WorkflowExecutionProgressSchema",
+        "type": "object"
+      },
+      "WorkflowExecutionPendingReasonSchema": {
+        "description": "Why a ``requested`` edge execution has not started yet.\n\n``None`` on any row that is not waiting on an edge worker.",
+        "properties": {
+          "reason": {
+            "enum": [
+              "worker_starting",
+              "awaiting_edge"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "progress_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Percent"
+          }
+        },
+        "required": [
+          "reason",
+          "message"
+        ],
+        "title": "WorkflowExecutionPendingReasonSchema",
+        "type": "object"
+      },
+      "WorkflowNodeExecutionSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "execution_uuid": {
+            "title": "Execution Uuid",
+            "type": "string"
+          },
+          "node_uuid": {
+            "title": "Node Uuid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "input_data": {
+            "items": {},
+            "title": "Input Data",
+            "type": "array"
+          },
+          "output_data": {
+            "items": {},
+            "title": "Output Data",
+            "type": "array"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "error_message": {
+            "title": "Error Message",
+            "type": "string"
+          },
+          "execution_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Time Ms"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "activation_index": {
+            "default": 0,
+            "title": "Activation Index",
+            "type": "integer"
+          },
+          "caller_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Uuid"
+          }
+        },
+        "required": [
+          "uuid",
+          "execution_uuid",
+          "node_uuid",
+          "status",
+          "input_data",
+          "output_data",
+          "started_at",
+          "finished_at",
+          "error_message",
+          "execution_time_ms",
+          "metadata"
+        ],
+        "title": "WorkflowNodeExecutionSchema",
+        "type": "object"
+      },
+      "WorkflowInputOptionSchema": {
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "WorkflowInputOptionSchema",
+        "type": "object"
+      },
+      "EvidenceReferenceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "reference": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          },
+          "timestamp_us": {
+            "anyOf": [
+              {
+                "maximum": 9007199254740991,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp Us"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "EvidenceReferenceInput",
+        "type": "object"
+      },
+      "EvidenceMeasurementInput": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "minimum": 0,
+            "title": "Value",
+            "type": "number"
+          },
+          "unit": {
+            "enum": [
+              "mm",
+              "cm",
+              "m",
+              "px"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "uncertainty": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty"
+          },
+          "method": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Method",
+            "type": "string"
+          },
+          "calibration_reference": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Reference"
+          }
+        },
+        "required": [
+          "value",
+          "unit",
+          "method"
+        ],
+        "title": "EvidenceMeasurementInput",
+        "type": "object"
+      },
+      "ImageAnnotationContractSchema": {
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "coordinate_scale": {
+            "title": "Coordinate Scale",
+            "type": "number"
+          },
+          "coordinate_order": {
+            "title": "Coordinate Order",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "kind",
+          "coordinate_scale",
+          "coordinate_order"
+        ],
+        "title": "ImageAnnotationContractSchema",
+        "type": "object"
+      },
+      "WorkflowProgressStepSchema": {
+        "properties": {
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "node_uuid": {
+            "title": "Node Uuid",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "activation_index": {
+            "title": "Activation Index",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "required": [
+          "uuid",
+          "node_uuid",
+          "name",
+          "status",
+          "activation_index",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "WorkflowProgressStepSchema",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "CustomTokenAuthentication": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization"
+      }
+    }
+  }
+}

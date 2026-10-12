@@ -1,0 +1,125 @@
+@import "./workbench.css";
+.gis-studio {
+  max-width: 1440px;
+  margin: auto;
+  padding: 35px 28px 60px;
+}
+.gis-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 28px;
+}
+.gis-heading h1 {
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 550;
+  letter-spacing: -1.4px;
+  margin: 12px 0;
+}
+.gis-heading p,
+.gis-footer,
+.muted {
+  color: var(--cw-muted);
+}
+.gis-kicker {
+  font-size: 11px;
+  letter-spacing: 1.7px;
+  color: #77c9ec;
+  text-transform: uppercase;
+}
+.gis-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+.gis-results {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr);
+  gap: 30px;
+}
+.gis-field {
+  display: grid;
+  gap: 9px;
+  margin: 20px 0;
+}
+.gis-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  background: var(--cw-bg);
+  color: var(--cw-text);
+  border: 1px solid var(--cw-border);
+  border-radius: 8px;
+  font: inherit;
+}
+.gis-toggle {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--cw-muted);
+}
+.gis-activity-tabs {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.gis-activity-tabs .cw-resource {
+  flex: 1;
+  min-width: 220px;
+  max-width: 460px;
+}
+.gis-activity-tabs [aria-pressed="true"] {
+  border-color: var(--cw-accent);
+}
+.gis-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 26px 0;
+}
+.gis-footer {
+  font-size: 12px;
+  max-width: 950px;
+  margin-top: 30px;
+  line-height: 1.7;
+}
+.gis-studio a {
+  color: #77c9ec;
+}
+.gis-studio .panel {
+  min-width: 0;
+}
+.gis-studio .cw-map-canvas {
+  height: 370px;
+}
+.gis-studio .cw-resource {
+  padding: 14px;
+}
+.gis-studio .cw-resource strong {
+  font-size: 14px;
+}
+.gis-studio .cw-resource small {
+  line-height: 1.7;
+}
+.gis-studio .cw-browser p {
+  line-height: 1.6;
+}
+@media (max-width: 850px) {
+  .gis-grid,
+  .gis-results {
+    grid-template-columns: 1fr;
+  }
+  .gis-heading {
+    display: block;
+  }
+  .gis-studio {
+    padding: 24px 14px;
+  }
+  .gis-section-head {
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,248 @@
+@import "./environment-browser.css";
+.workbench-grid {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 22px;
+}
+.panel {
+  padding: 22px;
+  border: 1px solid #293745;
+  border-radius: 13px;
+  background: #111b26;
+  min-width: 0;
+}
+.panel h2 {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0 0 18px;
+}
+.panel h3 {
+  font-weight: 500;
+  font-size: 14px;
+}
+.muted {
+  color: #91a7bc;
+}
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid #2f5766;
+  background: #17343b;
+  color: #89e0d1;
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+.tag.amber {
+  color: #f0cc81;
+  background: #392f1f;
+  border-color: #68532f;
+}
+.metric-row {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+  margin: 22px 0;
+}
+.metric-row strong {
+  font-size: 27px;
+  font-weight: 450;
+  display: block;
+}
+.metric-row span {
+  font-size: 11px;
+  color: #93abc1;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+.fields label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #a8bdcf;
+}
+.fields input,
+.fields select,
+.fields textarea {
+  width: 100%;
+  min-width: 0;
+  background: #0b141e;
+  color: #e2edf5;
+  border: 1px solid #344659;
+  border-radius: 7px;
+  padding: 9px;
+  font: inherit;
+}
+.fields textarea {
+  min-height: 76px;
+}
+.span-2 {
+  grid-column: 1/-1;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  margin: 18px 0;
+}
+.workbench-map {
+  height: 450px;
+  border: 1px solid #334554;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.workbench-map .cesium-viewer-bottom {
+  display: none;
+}
+.workbench-map:empty {
+  background: #142331;
+}
+.draft-code {
+  font-size: 11px;
+  color: #9dd4f2;
+  background: #0b141e;
+  padding: 15px;
+  border-radius: 8px;
+  max-height: 340px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.note {
+  border-left: 2px solid #d4a754;
+  padding: 10px 14px;
+  color: #c0af8e;
+  font-size: 12px;
+  background: #251f173f;
+}
+.issues {
+  padding-left: 18px;
+  color: #e3bf84;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.evidence-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(230px, 1fr);
+  gap: 20px;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.comparison article {
+  background: #182635;
+  padding: 17px;
+  border-radius: 9px;
+}
+.comparison h3 {
+  margin-top: 0;
+}
+.defect-map {
+  width: 100%;
+  height: 225px;
+  display: block;
+  background: #0b1520;
+  border-radius: 10px;
+}
+.workbench-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.workbench-table th,
+.workbench-table td {
+  padding: 13px 9px;
+  text-align: left;
+  border-bottom: 1px solid #2a3b4e;
+}
+.workbench-table th {
+  color: #8fa8bd;
+  font-weight: 450;
+}
+.workbench-table tr.selected {
+  background: #193b4b;
+}
+.section-gap {
+  margin-top: 20px;
+}
+.workbench-grid aside .cw-resource {
+  margin-bottom: 8px;
+}
+.compact {
+  font-size: 12px;
+}
+.status-line {
+  min-height: 24px;
+  color: #90cde7;
+  font-size: 12px;
+}
+.review-log {
+  max-height: 160px;
+  overflow: auto;
+  color: #a5bbcc;
+  font-size: 12px;
+}
+.sim-progress {
+  width: 100%;
+  accent-color: #38bdf8;
+}
+.plan-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 15px 0;
+}
+.plan-steps span {
+  padding: 5px 9px;
+  background: #1c3145;
+  border-radius: 6px;
+  color: #a6c9e3;
+  font-size: 11px;
+}
+@media (max-width: 1000px) {
+  .workbench-grid {
+    grid-template-columns: 1fr;
+  }
+  .evidence-layout {
+    grid-template-columns: 1fr;
+  }
+  .workbench-grid aside .cw-resource-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .fields,
+  .comparison {
+    grid-template-columns: 1fr;
+  }
+  .span-2 {
+    grid-column: auto;
+  }
+  .panel {
+    padding: 15px;
+  }
+  .workbench-grid aside .cw-resource-list {
+    grid-template-columns: 1fr;
+  }
+  .workbench-map {
+    height: 330px;
+  }
+  .metric-row {
+    gap: 18px;
+  }
+  .workbench-table {
+    font-size: 10px;
+  }
+  .workbench-table td,
+  .workbench-table th {
+    padding: 8px 4px;
+  }
+}

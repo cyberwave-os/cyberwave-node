@@ -1,0 +1,9 @@
+Cyberwave JavaScript SDK
+Copyright 2025-2026 Cyberwave S.p.a.
+
+Extends the official cyberwave-os/cyberwave-node SDK originally authored by
+Vittorio ErLapso Banfi. The package retains the Apache-2.0 license declared
+by that repository and the published cyberwave npm package.
+
+Robot meshes, textures, and environment data fetched by examples are not
+included in this distribution. Their respective owners' licenses apply.
