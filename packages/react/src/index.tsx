@@ -93,12 +93,12 @@ export function RecordingVideo({ src, onTime, onError }: { src: string; onTime?:
 export { WorkflowCatalog } from './workflow-catalog.js';
 export { WorkflowPlanner } from './workflow-planner.js';
 export { WorkflowMonitor, workflowError } from './workflow-monitor.js';
-export { InspectionVerificationPanel } from './inspection-verification.js';
+export { EvidenceVerificationPanel } from './evidence-verification.js';
 
 export { SensorTelemetryPanel, useSensorTelemetry } from './sensor-telemetry.js';
 export { SensorSelector, LiveSensorTelemetryPanel, useLiveSensorTelemetry } from './sensor-controls.js';
 export { ActivityResults, MeasurementCard, EvidencePreview, type ActivityResult } from './activity-results.js';
-export { InspectionCampaignBrowser, useInspectionCampaign, InspectionObservationList, InspectionObservationDetails, type InspectionObservation } from './inspection-browser.js';
+export { EvidenceCollectionBrowser, useEvidenceCollection, EvidenceRecordList, EvidenceRecordDetails, type EvidenceRecord } from './evidence-browser.js';
 export { RecordingPlaybackPanel } from './recording-playback.js';
 export { DatasetSampleBrowser } from './dataset-samples.js';
 export { DatasetBrowser, ModelBrowser, ModelInputSummary, modelInputTypes } from './data-catalogs.js';

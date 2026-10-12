@@ -53,11 +53,11 @@ test('inspection writes are local, authenticated, bounded to metadata routes',as
   const calls=[];
   await run(async(url,opts)=>{calls.push({url:String(url),opts});return Response.json({uuid:'campaign'});},async request=>{
     await request('/gateway/connection','POST',{baseUrl:'https://api.cyberwave.com',token:'remote-token'});
-    assert.equal((await request('/gateway/rest/api/v1/environments/env/inspection-campaigns','POST',{external_id:'demo'})).status,405);
+    assert.equal((await request('/gateway/rest/api/v1/environments/env/evidence-collections','POST',{external_id:'demo'})).status,405);
     await request('/gateway/connection','POST',{baseUrl:'http://localhost:8000'});
-    assert.equal((await request('/gateway/rest/api/v1/environments/env/inspection-campaigns','POST',{external_id:'demo'})).status,200);
+    assert.equal((await request('/gateway/rest/api/v1/environments/env/evidence-collections','POST',{external_id:'demo'})).status,200);
     assert.equal((await request('/gateway/rest/api/v1/twins/twin/missions/mission/execute','POST',{})).status,405);
-    assert.equal((await request('/gateway/rest/api/v1/environments/env/inspection-campaigns','DELETE')).status,405);
+    assert.equal((await request('/gateway/rest/api/v1/environments/env/evidence-collections','DELETE')).status,405);
     assert.equal(calls.length,1); assert.equal(calls[0].opts.method,'POST'); assert.equal(calls[0].opts.headers.Authorization,'Bearer local-only-secret');
     assert.deepEqual(JSON.parse(calls[0].opts.body),{external_id:'demo'});
   });

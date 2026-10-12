@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   EnvironmentBrowser,
-  InspectionVerificationPanel,
+  EvidenceVerificationPanel,
 } from "@cyberwave/react";
 import type { CyberwaveClient, Environment } from "cyberwave";
 import { MaintenanceSource } from "./maintenance-source.tsx";
@@ -21,14 +21,14 @@ export function StoredVerification({ client }: { client: CyberwaveClient }) {
       return;
     setBusy(true);
     try {
-      const campaign = await client.inspections.get(
+      const campaign = await client.evidence.get(
         baseline.environmentId,
         baseline.campaignId,
       );
-      const observation = campaign.observations.find(
+      const observation = campaign.records.find(
         (item) => item.uuid === baseline.observationId,
       )!;
-      await client.inspections.importCampaign(baseline.environmentId, {
+      await client.evidence.importCollection(baseline.environmentId, {
         external_id: "sdk-verification-" + baseline.observationId,
         name: "Synthetic verification visit",
         asset_reference: campaign.asset_reference,
@@ -36,10 +36,10 @@ export function StoredVerification({ client }: { client: CyberwaveClient }) {
         coverage: 0.68,
         limitations:
           "Synthetic SDK fixture. Partial campaign coverage; not a real maintenance result.",
-        observations: [
+        records: [
           {
             external_id: "synthetic-covered-absence",
-            defect_external_id: observation.source.defect_external_id,
+            subject_external_id: observation.source.subject_external_id,
             kind: observation.source.kind,
             observed: false,
             target_covered: true,
@@ -99,11 +99,11 @@ export function StoredVerification({ client }: { client: CyberwaveClient }) {
                 </button>
               )}
               <p role="status">{status}</p>
-              <InspectionVerificationPanel
+              <EvidenceVerificationPanel
                 key={baseline.reviewId + revision}
                 client={client}
                 environmentId={baseline.environmentId}
-                defectId={baseline.defectId}
+                subjectId={baseline.subjectId}
                 baselineReviewId={baseline.reviewId}
                 severity={baseline.severity}
                 priority={baseline.priority}

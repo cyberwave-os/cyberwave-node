@@ -19,10 +19,10 @@ export type VideoSession = ExtensionComponents['schemas']['TwinVideoSessionSchem
 export type TwinTelemetryQuery = NonNullable<paths['/api/v1/twins/{uuid}/telemetry']['get']['parameters']['query']>;
 export { twinSensors, subscribeSensorTelemetry, sensorSampleId } from './sensors.js';
 export type { TwinSensor, SensorTelemetryTransport, SensorTelemetrySample } from './sensors.js';
-/** Preview contract: requires a backend with the inspection extension deployed. */
-export type InspectionCampaign = ExtensionComponents['schemas']['InspectionCampaignDetailSchema'];
-export type InspectionManifest = ExtensionComponents['schemas']['ImportInspectionCampaignInput'];
-export type InspectionReviewInput = ExtensionComponents['schemas']['CreateInspectionReviewInput'];
+/** Preview contract: requires a backend with the evidence extension deployed. */
+export type EvidenceCollection = ExtensionComponents['schemas']['EvidenceCollectionDetailSchema'];
+export type EvidenceManifest = ExtensionComponents['schemas']['ImportEvidenceCollectionInput'];
+export type EvidenceReviewInput = ExtensionComponents['schemas']['CreateEvidenceReviewInput'];
 export type Mission = components['schemas']['MissionSchema'];
 export type MissionExecution = components['schemas']['MissionExecutionSchema'];
 export type Workflow = components['schemas']['WorkflowSchema'];
@@ -178,12 +178,12 @@ export function createCyberwave(options: ClientOptions = {}) {
     },
   };
   /** Additive development API. Import and review persist metadata; neither commands a device. */
-  const inspections = {
-    list: (uuid: string, query: {limit?: number; offset?: number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/inspection-campaigns', {params:{path:{uuid},query},...opts})),
-    get: (uuid: string, campaign_uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/inspection-campaigns/{campaign_uuid}', {params:{path:{uuid,campaign_uuid}},...opts})),
-    importCampaign: (uuid: string, body: InspectionManifest, opts: ReadOptions = {}) => data(rest.POST('/api/v1/environments/{uuid}/inspection-campaigns', {params:{path:{uuid}},body,...opts})),
-    history: (uuid: string, defect_uuid: string, query: {limit?:number;offset?:number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/inspection-defects/{defect_uuid}/observations', {params:{path:{uuid,defect_uuid},query},...opts})),
-    review: (uuid: string, observation_uuid: string, body: InspectionReviewInput, opts: ReadOptions = {}) => data(rest.POST('/api/v1/environments/{uuid}/inspection-observations/{observation_uuid}/reviews', {params:{path:{uuid,observation_uuid}},body,...opts})),
+  const evidence = {
+    list: (uuid: string, query: {limit?: number; offset?: number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/evidence-collections', {params:{path:{uuid},query},...opts})),
+    get: (uuid: string, collection_uuid: string, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/evidence-collections/{collection_uuid}', {params:{path:{uuid,collection_uuid}},...opts})),
+    importCollection: (uuid: string, body: EvidenceManifest, opts: ReadOptions = {}) => data(rest.POST('/api/v1/environments/{uuid}/evidence-collections', {params:{path:{uuid}},body,...opts})),
+    history: (uuid: string, subject_uuid: string, query: {limit?:number;offset?:number} = {}, opts: ReadOptions = {}) => data(rest.GET('/api/v1/environments/{uuid}/evidence-subjects/{subject_uuid}/records', {params:{path:{uuid,subject_uuid},query},...opts})),
+    review: (uuid: string, record_uuid: string, body: EvidenceReviewInput, opts: ReadOptions = {}) => data(rest.POST('/api/v1/environments/{uuid}/evidence-records/{record_uuid}/reviews', {params:{path:{uuid,record_uuid}},body,...opts})),
   };
   async function loadEnvironment(uuid: string, opts: ReadOptions = {}): Promise<EnvironmentSnapshot> {
     const [environment, twins] = await Promise.all([environments.get(uuid, opts), environments.twins(uuid, opts)]);
@@ -217,7 +217,7 @@ export function createCyberwave(options: ClientOptions = {}) {
     }
     return { environment, twins, objects, warnings };
   }
-  return { baseUrl, rest, environments, assets, twins, missions, workflows, recordings, inspections, datasets, humanActions, mlmodels, loadEnvironment };
+  return { baseUrl, rest, environments, assets, twins, missions, workflows, recordings, evidence, datasets, humanActions, mlmodels, loadEnvironment };
 }
 export type CyberwaveClient = ReturnType<typeof createCyberwave>;
 

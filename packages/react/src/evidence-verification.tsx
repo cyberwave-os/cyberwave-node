@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import type { CyberwaveClient, InspectionReviewInput } from "cyberwave";
+import type { CyberwaveClient, EvidenceReviewInput } from "cyberwave";
 import { workflowError } from "./workflow-monitor.js";
-type Observation = Awaited<
-  ReturnType<CyberwaveClient["inspections"]["history"]>
+type EvidenceRecord = Awaited<
+  ReturnType<CyberwaveClient["evidence"]["history"]>
 >[number];
 /** Evidence selection and an authenticated append-only review. No external order is closed. */
-export function InspectionVerificationPanel({
+export function EvidenceVerificationPanel({
   client,
   environmentId,
-  defectId,
+  subjectId,
   baselineReviewId,
   severity,
   priority,
@@ -16,13 +16,13 @@ export function InspectionVerificationPanel({
 }: {
   client: CyberwaveClient;
   environmentId: string;
-  defectId: string;
+  subjectId: string;
   baselineReviewId: string;
-  severity: InspectionReviewInput["assessment"]["severity"];
-  priority: InspectionReviewInput["assessment"]["priority"];
+  severity: EvidenceReviewInput["assessment"]["severity"];
+  priority: EvidenceReviewInput["assessment"]["priority"];
   readOnly?: boolean;
 }) {
-  const [history, setHistory] = useState<Observation[]>([]);
+  const [history, setHistory] = useState<EvidenceRecord[]>([]);
   const [page, setPage] = useState(0),
     [revision, refresh] = useState(0);
   const [selected, select] = useState("");
@@ -37,16 +37,16 @@ export function InspectionVerificationPanel({
     setReason("");
     setOrder("");
     setKey(crypto.randomUUID());
-  }, [client, environmentId, defectId, baselineReviewId]);
+  }, [client, environmentId, subjectId, baselineReviewId]);
   useEffect(() => {
     const abort = new AbortController();
     setHistory([]);
     select("");
     setStatus("Loading evidence…");
-    client.inspections
+    client.evidence
       .history(
         environmentId,
-        defectId,
+        subjectId,
         { limit: 10, offset: page * 10 },
         { signal: abort.signal },
       )
@@ -60,23 +60,23 @@ export function InspectionVerificationPanel({
         if (!abort.signal.aborted) setStatus(workflowError(error));
       });
     return () => abort.abort();
-  }, [client, environmentId, defectId, page, revision]);
-  const observation = history.find((item) => item.uuid === selected);
-  const latest = observation?.reviews.reduce<
-    Observation["reviews"][number] | undefined
+  }, [client, environmentId, subjectId, page, revision]);
+  const record = history.find((item) => item.uuid === selected);
+  const latest = record?.reviews.reduce<
+    EvidenceRecord["reviews"][number] | undefined
   >((a, b) => (!a || b.revision > a.revision ? b : a), undefined);
   const covered =
-    observation?.source.target_covered === true &&
-    Boolean(observation.source.evidence);
-  const canResolve = covered && observation?.source.observed === false;
+    record?.source.target_covered === true &&
+    Boolean(record.source.evidence);
+  const canResolve = covered && record?.source.observed === false;
   async function save() {
-    if (!observation || !canResolve || busy) return;
+    if (!record || !canResolve || busy) return;
     setBusy(true);
     setStatus("Saving authenticated verification…");
     try {
-      const review = await client.inspections.review(
+      const review = await client.evidence.review(
         environmentId,
-        observation.uuid,
+        record.uuid,
         {
           expected_revision: latest?.revision ?? 0,
           idempotency_key: key,
@@ -93,7 +93,7 @@ export function InspectionVerificationPanel({
       );
       setHistory((items) =>
         items.map((item) =>
-          item.uuid === observation.uuid
+          item.uuid === record.uuid
             ? {
                 ...item,
                 reviews: [
@@ -121,13 +121,13 @@ export function InspectionVerificationPanel({
     <section className="cw-workflows section-gap">
       <h3>Verify a stored finding</h3>
       <p>
-        Choose a later observation of the same target. The backend checks
+        Choose a later record of the same target. The backend checks
         covered-target evidence, absence of the finding and the latest validated
-        baseline. Campaign acceptance remains a separate decision.
+        baseline. Collection acceptance remains a separate decision.
       </p>
       <p className="muted">Baseline review: {baselineReviewId}</p>
       <label className="field">
-        Verification observation
+        Verification record
         <select
           disabled={busy}
           value={selected}
@@ -178,10 +178,10 @@ export function InspectionVerificationPanel({
           Reload evidence
         </button>
       </div>
-      {observation && (
+      {record && (
         <div className="note">
-          <p>Evidence: {observation.source.evidence?.reference ?? "None"}</p>
-          <p>{observation.source.limitation}</p>
+          <p>Evidence: {record.source.evidence?.reference ?? "None"}</p>
+          <p>{record.source.limitation}</p>
           <p>
             Latest condition:{" "}
             {latest?.assessment.technical_state ?? "Not reviewed"} · revision{" "}
@@ -242,9 +242,9 @@ export function InspectionVerificationPanel({
       >
         Save verified resolution
       </button>
-      {!canResolve && observation && (
+      {!canResolve && record && (
         <p className="note">
-          This observation cannot establish resolution. Missing coverage or a
+          This record cannot establish resolution. Missing coverage or a
           persistent finding must remain visible.
         </p>
       )}

@@ -205,22 +205,22 @@ test('frame review replaces and releases previews, and cannot submit an undecode
   } finally { URL.createObjectURL = previous.create; URL.revokeObjectURL = previous.revoke; }
 });
 
-test('inspection browser resets pagination and never shows another API client campaign rows', async () => {
-  const { InspectionCampaignBrowser } = await import('@cyberwave/react');
+test('evidence browser resets pagination and never shows another API client collection rows', async () => {
+  const { EvidenceCollectionBrowser } = await import('@cyberwave/react');
   const requests: URL[]=[];
   const first=createCyberwave({fetch:async()=>Response.json(Array.from({length:10},(_,i)=>({uuid:`old-${i}`,name:`Old campaign ${i}`,asset_reference:'asset',coverage:null})))});
   const second=createCyberwave({fetch:async request=>{requests.push(new URL((request as Request).url));return Response.json([]);}});
   await mounted(async({render,click,element})=>{
-    const view=(client:typeof first)=>h(CyberwaveProvider,{client,children:h(InspectionCampaignBrowser,{environmentId:'environment',onSelect(){}})});
-    await render(view(first));await click('Next campaigns');await render(view(second));
+    const view=(client:typeof first)=>h(CyberwaveProvider,{client,children:h(EvidenceCollectionBrowser,{environmentId:'environment',onSelect(){}})});
+    await render(view(first));await click('Next collections');await render(view(second));
     assert.equal(requests[0].searchParams.get('offset'),'0');assert.doesNotMatch(element.textContent!,/Old campaign/);
   });
 });
-test('inspection detail ignores a late campaign response after selection changes', async()=>{
- const {useInspectionCampaign}=await import('@cyberwave/react');
+test('evidence detail ignores a late collection response after selection changes', async()=>{
+ const {useEvidenceCollection}=await import('@cyberwave/react');
  let finish: (response:Response)=>void=()=>{};
- const client=createCyberwave({fetch:async request=>(request as Request).url.endsWith('/old')?new Promise<Response>(resolve=>{finish=resolve;}):Response.json({uuid:'current',name:'Current campaign',observations:[]})});
- function Detail({id}:{id:string}){const state=useInspectionCampaign('env',id);return h('div',null,state.data?.name||'Loading');}
+ const client=createCyberwave({fetch:async request=>(request as Request).url.endsWith('/old')?new Promise<Response>(resolve=>{finish=resolve;}):Response.json({uuid:'current',name:'Current campaign',records:[]})});
+ function Detail({id}:{id:string}){const state=useEvidenceCollection('env',id);return h('div',null,state.data?.name||'Loading');}
  await mounted(async({render,element})=>{
  const view=(id:string)=>h(CyberwaveProvider,{client,children:h(Detail,{id})});
  await render(view('old'));await render(view('current'));await act(async()=>finish(Response.json({uuid:'old',name:'Obsolete campaign'})));
@@ -236,12 +236,12 @@ test('activity details preserve zero, missing units and unavailable evidence wit
  });
 });
 test('latest review is chosen by revision and absent coverage is never rendered as resolution',async()=>{
- const {InspectionObservationDetails}=await import('@cyberwave/react');
- const base={uuid:'o',campaign_uuid:'c',defect_uuid:'d',source:{external_id:'o',defect_external_id:'d',kind:'Crack',observed:false,limitation:'No coverage'},reviews:[]} as any;
+ const {EvidenceRecordDetails}=await import('@cyberwave/react');
+ const base={uuid:'o',collection_uuid:'c',subject_uuid:'d',source:{external_id:'o',subject_external_id:'d',kind:'Crack',observed:false,limitation:'No coverage'},reviews:[]} as any;
  await mounted(async({render,element})=>{
- await render(h(InspectionObservationDetails,{observation:base}));assert.match(element.textContent!,/coverage unconfirmed/);assert.doesNotMatch(element.textContent!,/resolved/);
+ await render(h(EvidenceRecordDetails,{record:base}));assert.match(element.textContent!,/coverage unconfirmed/);assert.doesNotMatch(element.textContent!,/resolved/);
  const review=(revision:number,technical_state:string)=>({uuid:`r${revision}`,revision,assessment:{decision:'validated',technical_state,severity:'low',priority:'routine'},reason:'Reviewed',created_at:'2026-10-11',created_by_uuid:'reviewer'});
- await render(h(InspectionObservationDetails,{observation:{...base,reviews:[review(2,'stable'),review(1,'new')]}}));
+ await render(h(EvidenceRecordDetails,{record:{...base,reviews:[review(2,'stable'),review(1,'new')]}}));
  assert.equal(element.querySelector('dd')?.textContent,'stable');
  });
 });

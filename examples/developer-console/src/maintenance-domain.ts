@@ -1,25 +1,25 @@
 /** Application-owned maintenance proposals. These are examples, not platform models. */
-import type { InspectionCampaign, InspectionReviewInput } from "cyberwave";
+import type { EvidenceCollection, EvidenceReviewInput } from "cyberwave";
 
 export type FindingReference = {
   environmentId: string;
   campaignId: string;
-  defectId: string;
+  subjectId: string;
   observationId: string;
   reviewId: string;
   revision: number;
   assetReference: string;
   evidenceReference: string;
   name: string;
-  severity: InspectionReviewInput["assessment"]["severity"];
-  priority: InspectionReviewInput["assessment"]["priority"];
+  severity: EvidenceReviewInput["assessment"]["severity"];
+  priority: EvidenceReviewInput["assessment"]["priority"];
   technicalState: string;
 };
 export function validatedFindings(
   environmentId: string,
-  campaign: InspectionCampaign,
+  campaign: EvidenceCollection,
 ): FindingReference[] {
-  return campaign.observations.flatMap((observation) => {
+  return campaign.records.flatMap((observation) => {
     const review = observation.reviews.reduce<
       (typeof observation.reviews)[number] | undefined
     >(
@@ -37,7 +37,7 @@ export function validatedFindings(
       {
         environmentId,
         campaignId: campaign.uuid,
-        defectId: observation.defect_uuid,
+        subjectId: observation.subject_uuid,
         observationId: observation.uuid,
         reviewId: review.uuid,
         revision: review.revision,

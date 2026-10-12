@@ -1,4 +1,4 @@
-/** Development BFF: remote reads, explicit local inspection and workflow writes. */
+/** Development BFF: remote reads, explicit local evidence and workflow writes. */
 import { randomBytes, randomUUID } from 'node:crypto';
 import { streamSensorEvents } from './sensor-events.mjs';
 import { Readable } from 'node:stream';
@@ -7,8 +7,8 @@ const ttl = 60 * 60 * 1000;
 const allowed = /^\/api\/v1\/(assets(?:\/[a-zA-Z0-9-]+)?|environments(?:\/[a-zA-Z0-9-]+(?:\/(?:twins|waypoints|recordings(?:\/[a-zA-Z0-9_-]+\/data)?))?)?|twins\/[a-zA-Z0-9-]+\/missions(?:\/[a-zA-Z0-9-]+(?:\/executions)?)?)$/;
 const twinRead = /^\/api\/v1\/twins\/[a-zA-Z0-9-]+(?:\/telemetry)?$/;
 const videoViewer = /^\/api\/v1\/twins\/[a-zA-Z0-9-]+\/video-sessions(?:\/[a-zA-Z0-9_-]+\/close)?$/;
-const inspectionRead = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:missions|inspection-campaigns(?:\/[a-zA-Z0-9-]+)?|inspection-defects\/[a-zA-Z0-9-]+\/observations)$/;
-const inspectionWrite = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:inspection-campaigns|inspection-observations\/[a-zA-Z0-9-]+\/reviews)$/;
+const collectionRead = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:missions|evidence-collections(?:\/[a-zA-Z0-9-]+)?|evidence-subjects\/[a-zA-Z0-9-]+\/records)$/;
+const collectionWrite = /^\/api\/v1\/environments\/[a-zA-Z0-9-]+\/(?:evidence-collections|evidence-records\/[a-zA-Z0-9-]+\/reviews)$/;
 const governanceRead = /^\/api\/v1\/workspaces\/[a-zA-Z0-9-]+\/missions$/;
 const workflowCommand = /^\/api\/v1\/workflows\/(?:[a-zA-Z0-9-]+\/(?:clone|activate|deactivate|execute)|executions\/[a-zA-Z0-9-]+\/cancel)$/;
 const workflowEdit = /^\/api\/v1\/workflows\/[a-zA-Z0-9-]+(?:\/nodes\/[a-zA-Z0-9-]+)?$/;
@@ -86,13 +86,13 @@ export function createConnectionGateway(settings = {}, transport = fetch) {
       if (req.method !== 'GET') {
         const local = ['localhost','127.0.0.1','[::1]'].includes(new URL(session.origin).hostname);
         const permitted =
-          (req.method === 'POST' && (inspectionWrite.test(path) || workflowCommand.test(path) || evidenceWrite.test(path) || modelRun.test(path) || videoViewer.test(path))) ||
+          (req.method === 'POST' && (collectionWrite.test(path) || workflowCommand.test(path) || evidenceWrite.test(path) || modelRun.test(path) || videoViewer.test(path))) ||
           (req.method === 'PUT' && workflowEdit.test(path));
         if (!permitted || !local || !session.token) { send(405, { detail: 'Only authenticated local example writes are enabled.' }); return true; }
         const bodyLimit = modelRun.test(path) ? 28*1024*1024 : 1024*1024;
         body = ''; for await (const chunk of req) { body += chunk; if (Buffer.byteLength(body) > bodyLimit) { send(413,{detail:'Request body too large'}); return true; } }
         if (body) JSON.parse(body); else body = undefined;
-      } else if (!allowed.test(path) && !twinRead.test(path) && !inspectionRead.test(path) && !governanceRead.test(path) && !workflowRead.test(path) && !evidenceRead.test(path) && !modelRead.test(path)) { send(403, { detail: 'Unsupported read operation' }); return true; }
+      } else if (!allowed.test(path) && !twinRead.test(path) && !collectionRead.test(path) && !governanceRead.test(path) && !workflowRead.test(path) && !evidenceRead.test(path) && !modelRead.test(path)) { send(403, { detail: 'Unsupported read operation' }); return true; }
       const upstream = await transport(new URL(path + url.search, session.origin), { method:req.method, body, redirect: 'error', signal: AbortSignal.timeout(modelRun.test(path) ? 120000 : 20000), headers: { ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}), ...(body ? {'Content-Type':'application/json'} : {}) } });
       if (!upstream.ok) {
         const error = await upstream.json().catch(() => ({}));

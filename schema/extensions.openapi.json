@@ -942,10 +942,10 @@
         ]
       }
     },
-    "/api/v1/environments/{uuid}/inspection-campaigns": {
+    "/api/v1/environments/{uuid}/evidence-collections": {
       "post": {
-        "operationId": "src_app_api_inspections_import_inspection_campaign",
-        "summary": "Import Inspection Campaign",
+        "operationId": "src_app_api_evidence_import_evidence_collection",
+        "summary": "Import Evidence Collection",
         "parameters": [
           {
             "in": "path",
@@ -963,21 +963,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InspectionCampaignDetailSchema"
+                  "$ref": "#/components/schemas/EvidenceCollectionDetailSchema"
                 }
               }
             }
           }
         },
-        "description": "Atomically import metadata; repeat the same external_id and body to retry.\n\nChanges require a new campaign external_id. Existing source observations and\nreview revisions are never overwritten by an import.",
+        "description": "Atomically import metadata; repeat the same external_id and body to retry.\n\nChanges require a new collection external_id. Existing source records and\nreview revisions are never overwritten by an import.",
         "tags": [
-          "Inspections"
+          "Evidence"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImportInspectionCampaignInput"
+                "$ref": "#/components/schemas/ImportEvidenceCollectionInput"
               }
             }
           },
@@ -990,8 +990,8 @@
         ]
       },
       "get": {
-        "operationId": "src_app_api_inspections_list_inspection_campaigns",
-        "summary": "List Inspection Campaigns",
+        "operationId": "src_app_api_evidence_list_evidence_collections",
+        "summary": "List Evidence Collections",
         "parameters": [
           {
             "in": "path",
@@ -1034,7 +1034,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/InspectionCampaignSchema"
+                    "$ref": "#/components/schemas/EvidenceCollectionSchema"
                   },
                   "title": "Response",
                   "type": "array"
@@ -1044,7 +1044,7 @@
           }
         },
         "tags": [
-          "Inspections"
+          "Evidence"
         ],
         "security": [
           {
@@ -1053,10 +1053,10 @@
         ]
       }
     },
-    "/api/v1/environments/{uuid}/inspection-campaigns/{campaign_uuid}": {
+    "/api/v1/environments/{uuid}/evidence-collections/{collection_uuid}": {
       "get": {
-        "operationId": "src_app_api_inspections_get_inspection_campaign",
-        "summary": "Get Inspection Campaign",
+        "operationId": "src_app_api_evidence_get_evidence_collection",
+        "summary": "Get Evidence Collection",
         "parameters": [
           {
             "in": "path",
@@ -1069,10 +1069,10 @@
           },
           {
             "in": "path",
-            "name": "campaign_uuid",
+            "name": "collection_uuid",
             "schema": {
               "format": "uuid",
-              "title": "Campaign Uuid",
+              "title": "Collection Uuid",
               "type": "string"
             },
             "required": true
@@ -1084,14 +1084,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InspectionCampaignDetailSchema"
+                  "$ref": "#/components/schemas/EvidenceCollectionDetailSchema"
                 }
               }
             }
           }
         },
         "tags": [
-          "Inspections"
+          "Evidence"
         ],
         "security": [
           {
@@ -1100,10 +1100,10 @@
         ]
       }
     },
-    "/api/v1/environments/{uuid}/inspection-defects/{defect_uuid}/observations": {
+    "/api/v1/environments/{uuid}/evidence-subjects/{subject_uuid}/records": {
       "get": {
-        "operationId": "src_app_api_inspections_get_inspection_defect_history",
-        "summary": "Get Inspection Defect History",
+        "operationId": "src_app_api_evidence_get_evidence_subject_history",
+        "summary": "Get Evidence Subject History",
         "parameters": [
           {
             "in": "path",
@@ -1116,10 +1116,10 @@
           },
           {
             "in": "path",
-            "name": "defect_uuid",
+            "name": "subject_uuid",
             "schema": {
               "format": "uuid",
-              "title": "Defect Uuid",
+              "title": "Subject Uuid",
               "type": "string"
             },
             "required": true
@@ -1156,7 +1156,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/InspectionObservationSchema"
+                    "$ref": "#/components/schemas/EvidenceRecordSchema"
                   },
                   "title": "Response",
                   "type": "array"
@@ -1166,7 +1166,7 @@
           }
         },
         "tags": [
-          "Inspections"
+          "Evidence"
         ],
         "security": [
           {
@@ -1175,10 +1175,10 @@
         ]
       }
     },
-    "/api/v1/environments/{uuid}/inspection-observations/{observation_uuid}/reviews": {
+    "/api/v1/environments/{uuid}/evidence-records/{record_uuid}/reviews": {
       "post": {
-        "operationId": "src_app_api_inspections_review_inspection_observation",
-        "summary": "Review Inspection Observation",
+        "operationId": "src_app_api_evidence_review_evidence_record",
+        "summary": "Review Evidence Record",
         "parameters": [
           {
             "in": "path",
@@ -1191,10 +1191,10 @@
           },
           {
             "in": "path",
-            "name": "observation_uuid",
+            "name": "record_uuid",
             "schema": {
               "format": "uuid",
-              "title": "Observation Uuid",
+              "title": "Record Uuid",
               "type": "string"
             },
             "required": true
@@ -1206,7 +1206,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InspectionReviewSchema"
+                  "$ref": "#/components/schemas/EvidenceReviewSchema"
                 }
               }
             }
@@ -1214,13 +1214,13 @@
         },
         "description": "Append a review using optimistic concurrency; retries return the same revision.",
         "tags": [
-          "Inspections"
+          "Evidence"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateInspectionReviewInput"
+                "$ref": "#/components/schemas/CreateEvidenceReviewInput"
               }
             }
           },
@@ -1721,7 +1721,7 @@
         "title": "SampleReviewInput",
         "type": "object"
       },
-      "ImportInspectionCampaignInput": {
+      "ImportEvidenceCollectionInput": {
         "additionalProperties": false,
         "properties": {
           "external_id": {
@@ -1767,12 +1767,12 @@
             "title": "Limitations",
             "type": "string"
           },
-          "observations": {
+          "records": {
             "items": {
-              "$ref": "#/components/schemas/InspectionObservationInput"
+              "$ref": "#/components/schemas/EvidenceRecordInput"
             },
             "maxItems": 1000,
-            "title": "Observations",
+            "title": "Records",
             "type": "array"
           }
         },
@@ -1781,12 +1781,12 @@
           "name",
           "asset_reference",
           "reference_version",
-          "observations"
+          "records"
         ],
-        "title": "ImportInspectionCampaignInput",
+        "title": "ImportEvidenceCollectionInput",
         "type": "object"
       },
-      "CreateInspectionReviewInput": {
+      "CreateEvidenceReviewInput": {
         "additionalProperties": false,
         "properties": {
           "expected_revision": {
@@ -1807,7 +1807,7 @@
             "type": "string"
           },
           "assessment": {
-            "$ref": "#/components/schemas/InspectionAssessmentInput"
+            "$ref": "#/components/schemas/EvidenceAssessmentInput"
           }
         },
         "required": [
@@ -1816,7 +1816,7 @@
           "reason",
           "assessment"
         ],
-        "title": "CreateInspectionReviewInput",
+        "title": "CreateEvidenceReviewInput",
         "type": "object"
       },
       "TwinTelemetryQueryResponseSchema": {
@@ -2636,7 +2636,7 @@
         "title": "DatasetSamplesPage",
         "type": "object"
       },
-      "InspectionCampaignDetailSchema": {
+      "EvidenceCollectionDetailSchema": {
         "properties": {
           "uuid": {
             "format": "uuid",
@@ -2679,11 +2679,11 @@
             "title": "Created At",
             "type": "string"
           },
-          "observations": {
+          "records": {
             "items": {
-              "$ref": "#/components/schemas/InspectionObservationSchema"
+              "$ref": "#/components/schemas/EvidenceRecordSchema"
             },
-            "title": "Observations",
+            "title": "Records",
             "type": "array"
           }
         },
@@ -2696,12 +2696,12 @@
           "coverage",
           "limitations",
           "created_at",
-          "observations"
+          "records"
         ],
-        "title": "InspectionCampaignDetailSchema",
+        "title": "EvidenceCollectionDetailSchema",
         "type": "object"
       },
-      "InspectionReviewSchema": {
+      "EvidenceReviewSchema": {
         "properties": {
           "uuid": {
             "format": "uuid",
@@ -2713,7 +2713,7 @@
             "type": "integer"
           },
           "assessment": {
-            "$ref": "#/components/schemas/InspectionAssessmentInput"
+            "$ref": "#/components/schemas/EvidenceAssessmentInput"
           },
           "reason": {
             "title": "Reason",
@@ -2745,7 +2745,7 @@
           "created_by_uuid",
           "created_at"
         ],
-        "title": "InspectionReviewSchema",
+        "title": "EvidenceReviewSchema",
         "type": "object"
       },
       "WorkflowExecutionSchema": {
@@ -2863,7 +2863,7 @@
         "title": "WorkflowExecutionSchema",
         "type": "object"
       },
-      "InspectionCampaignSchema": {
+      "EvidenceCollectionSchema": {
         "properties": {
           "uuid": {
             "format": "uuid",
@@ -2917,32 +2917,32 @@
           "limitations",
           "created_at"
         ],
-        "title": "InspectionCampaignSchema",
+        "title": "EvidenceCollectionSchema",
         "type": "object"
       },
-      "InspectionObservationSchema": {
+      "EvidenceRecordSchema": {
         "properties": {
           "uuid": {
             "format": "uuid",
             "title": "Uuid",
             "type": "string"
           },
-          "campaign_uuid": {
+          "collection_uuid": {
             "format": "uuid",
-            "title": "Campaign Uuid",
+            "title": "Collection Uuid",
             "type": "string"
           },
-          "defect_uuid": {
+          "subject_uuid": {
             "format": "uuid",
-            "title": "Defect Uuid",
+            "title": "Subject Uuid",
             "type": "string"
           },
           "source": {
-            "$ref": "#/components/schemas/InspectionObservationInput"
+            "$ref": "#/components/schemas/EvidenceRecordInput"
           },
           "reviews": {
             "items": {
-              "$ref": "#/components/schemas/InspectionReviewSchema"
+              "$ref": "#/components/schemas/EvidenceReviewSchema"
             },
             "title": "Reviews",
             "type": "array"
@@ -2950,12 +2950,12 @@
         },
         "required": [
           "uuid",
-          "campaign_uuid",
-          "defect_uuid",
+          "collection_uuid",
+          "subject_uuid",
           "source",
           "reviews"
         ],
-        "title": "InspectionObservationSchema",
+        "title": "EvidenceRecordSchema",
         "type": "object"
       },
       "MissionSchema": {
@@ -3030,7 +3030,7 @@
         "title": "MissionSchema",
         "type": "object"
       },
-      "InspectionAssessmentInput": {
+      "EvidenceAssessmentInput": {
         "additionalProperties": false,
         "properties": {
           "decision": {
@@ -3103,7 +3103,7 @@
           "priority",
           "technical_state"
         ],
-        "title": "InspectionAssessmentInput",
+        "title": "EvidenceAssessmentInput",
         "type": "object"
       },
       "SampleAnnotation": {
@@ -3150,7 +3150,7 @@
         "title": "SampleAnnotation",
         "type": "object"
       },
-      "InspectionObservationInput": {
+      "EvidenceRecordInput": {
         "additionalProperties": false,
         "properties": {
           "external_id": {
@@ -3159,10 +3159,10 @@
             "title": "External Id",
             "type": "string"
           },
-          "defect_external_id": {
+          "subject_external_id": {
             "maxLength": 128,
             "minLength": 1,
-            "title": "Defect External Id",
+            "title": "Subject External Id",
             "type": "string"
           },
           "kind": {
@@ -3220,7 +3220,7 @@
           "evidence": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/InspectionEvidenceInput"
+                "$ref": "#/components/schemas/EvidenceReferenceInput"
               },
               {
                 "type": "null"
@@ -3230,7 +3230,7 @@
           "measurement": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/InspectionMeasurementInput"
+                "$ref": "#/components/schemas/EvidenceMeasurementInput"
               },
               {
                 "type": "null"
@@ -3277,10 +3277,10 @@
         },
         "required": [
           "external_id",
-          "defect_external_id",
+          "subject_external_id",
           "kind"
         ],
-        "title": "InspectionObservationInput",
+        "title": "EvidenceRecordInput",
         "type": "object"
       },
       "TwinTelemetryRecordSchema": {
@@ -3875,7 +3875,7 @@
         "title": "WorkflowInputOptionSchema",
         "type": "object"
       },
-      "InspectionEvidenceInput": {
+      "EvidenceReferenceInput": {
         "additionalProperties": false,
         "properties": {
           "reference": {
@@ -3913,10 +3913,10 @@
         "required": [
           "reference"
         ],
-        "title": "InspectionEvidenceInput",
+        "title": "EvidenceReferenceInput",
         "type": "object"
       },
-      "InspectionMeasurementInput": {
+      "EvidenceMeasurementInput": {
         "additionalProperties": false,
         "properties": {
           "value": {
@@ -3970,7 +3970,7 @@
           "unit",
           "method"
         ],
-        "title": "InspectionMeasurementInput",
+        "title": "EvidenceMeasurementInput",
         "type": "object"
       },
       "ImageAnnotationContractSchema": {

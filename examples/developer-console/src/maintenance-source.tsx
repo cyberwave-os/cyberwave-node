@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { CyberwaveClient } from "cyberwave";
 import {
-  InspectionCampaignBrowser,
-  useInspectionCampaign,
+  EvidenceCollectionBrowser,
+  useEvidenceCollection,
 } from "@cyberwave/react";
 
 import {
@@ -26,7 +26,7 @@ function Source({
     data: campaign,
     loading,
     error,
-  } = useInspectionCampaign(environmentId, campaignId);
+  } = useEvidenceCollection(environmentId, campaignId);
   const findings = campaign ? validatedFindings(environmentId, campaign) : [];
   return (
     <section className="section-gap">
@@ -35,7 +35,7 @@ function Source({
         Choose a campaign, then link a finding whose latest review is validated.
         This is a campaign snapshot, not an asset-wide maintenance backlog.
       </p>
-      <InspectionCampaignBrowser
+      <EvidenceCollectionBrowser
         environmentId={environmentId}
         selectedId={campaignId}
         onSelect={(c) => setCampaignId(c.uuid)}

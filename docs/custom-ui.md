@@ -9,7 +9,7 @@ Start with an application-owned session and one `createCyberwave` client per API
 | Need | Reuse | Runnable example |
 | --- | --- | --- |
 | Map assets and drill into activities | `LocationMap`, `ActivityResults`, `MeasurementCard`, `EvidencePreview` | [18 · Asset operations](http://127.0.0.1:5173/asset-operations.html) |
-| Browse stored inspection history | `InspectionCampaignBrowser`, `useInspectionCampaign`, observation list/details | [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html) |
+| Browse stored inspection history | `EvidenceCollectionBrowser`, `useEvidenceCollection`, observation list/details | [19 · Inspection atlas](http://127.0.0.1:5173/inspection-atlas.html) |
 | Browse environments and load real objects | `EnvironmentBrowser`, `loadEnvironment`, optional `@cyberwave/environment-3d` | [01 · Environments](http://127.0.0.1:5173/environments.html) |
 | Show a live or simulation camera | `twinSensors`, `connectVideo` or `VideoStream` | [16 · Sensor video](http://127.0.0.1:5173/sensor-video.html) |
 | Inspect stored samples from one sensor | `twins.telemetry`, `useSensorTelemetry`, `SensorTelemetryPanel` | [17 · Sensor telemetry](http://127.0.0.1:5173/sensor-telemetry.html) |

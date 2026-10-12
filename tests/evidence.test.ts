@@ -28,6 +28,32 @@ test("development discovery uses scoped read routes and preserves pagination fil
   assert.equal(new URL(requests[1].url).searchParams.get("twin_uuid"), "twin");
   assert.ok(requests.every((r) => r.method === "GET"));
 });
+test("evidence helpers share the generic routes and preserve import identity", async () => {
+  const requests: Request[] = [];
+  const client = createCyberwave({ fetch: async (input) => {
+    requests.push(input as Request);
+    return Response.json({});
+  }});
+  const manifest = {
+    external_id: "quality-batch-1", name: "Checkpoint evidence",
+    asset_reference: "station-1", reference_version: "layout-v1",
+    records: [{external_id: "reading-1", subject_external_id: "checkpoint-7",
+      kind: "alignment", evidence: {reference: "attachment:frame-1"}}],
+  };
+  await client.evidence.importCollection("env", manifest);
+  await client.evidence.list("env", {limit: 10, offset: 20});
+  await client.evidence.get("env", "collection");
+  await client.evidence.history("env", "subject", {limit: 5, offset: 10});
+  assert.deepEqual(requests.map(r => [r.method, new URL(r.url).pathname]), [
+    ["POST", "/api/v1/environments/env/evidence-collections"],
+    ["GET", "/api/v1/environments/env/evidence-collections"],
+    ["GET", "/api/v1/environments/env/evidence-collections/collection"],
+    ["GET", "/api/v1/environments/env/evidence-subjects/subject/records"],
+  ]);
+  assert.deepEqual(await requests[0].json(), manifest);
+  assert.equal(new URL(requests[1].url).searchParams.get("offset"), "20");
+  assert.equal(new URL(requests[3].url).searchParams.get("limit"), "5");
+});
 test("review forwards concurrency and idempotency values without automatic retry", async () => {
   const requests: Request[] = [];
   const client = createCyberwave({
@@ -49,19 +75,21 @@ test("review forwards concurrency and idempotency values without automatic retry
     },
   };
   await assert.rejects(
-    client.inspections.review("env", "observation", payload),
+    client.evidence.review("env", "record", payload),
     (e: unknown) => e instanceof CyberwaveError && e.status === 409,
   );
   assert.equal(requests.length, 1);
+  assert.equal(new URL(requests[0].url).pathname,
+    "/api/v1/environments/env/evidence-records/record/reviews");
   assert.equal(requests[0].headers.get("Authorization"), "Bearer test-token");
   assert.deepEqual(await requests[0].json(), payload);
 });
-test("undeployed inspection API returns an explicit 404, never synthetic records", async () => {
+test("undeployed evidence API returns an explicit 404, never synthetic records", async () => {
   const client = createCyberwave({
     fetch: async () => Response.json({ detail: "Not found" }, { status: 404 }),
   });
   await assert.rejects(
-    client.inspections.list("env"),
+    client.evidence.list("env"),
     (e: unknown) => e instanceof CyberwaveError && e.status === 404,
   );
 });

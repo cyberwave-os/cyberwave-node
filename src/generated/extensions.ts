@@ -272,39 +272,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/environments/{uuid}/inspection-campaigns": {
+    "/api/v1/environments/{uuid}/evidence-collections": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List Inspection Campaigns */
-        get: operations["src_app_api_inspections_list_inspection_campaigns"];
+        /** List Evidence Collections */
+        get: operations["src_app_api_evidence_list_evidence_collections"];
         put?: never;
         /**
-         * Import Inspection Campaign
+         * Import Evidence Collection
          * @description Atomically import metadata; repeat the same external_id and body to retry.
          *
-         *     Changes require a new campaign external_id. Existing source observations and
+         *     Changes require a new collection external_id. Existing source records and
          *     review revisions are never overwritten by an import.
          */
-        post: operations["src_app_api_inspections_import_inspection_campaign"];
+        post: operations["src_app_api_evidence_import_evidence_collection"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/environments/{uuid}/inspection-campaigns/{campaign_uuid}": {
+    "/api/v1/environments/{uuid}/evidence-collections/{collection_uuid}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Inspection Campaign */
-        get: operations["src_app_api_inspections_get_inspection_campaign"];
+        /** Get Evidence Collection */
+        get: operations["src_app_api_evidence_get_evidence_collection"];
         put?: never;
         post?: never;
         delete?: never;
@@ -313,15 +313,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/environments/{uuid}/inspection-defects/{defect_uuid}/observations": {
+    "/api/v1/environments/{uuid}/evidence-subjects/{subject_uuid}/records": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Inspection Defect History */
-        get: operations["src_app_api_inspections_get_inspection_defect_history"];
+        /** Get Evidence Subject History */
+        get: operations["src_app_api_evidence_get_evidence_subject_history"];
         put?: never;
         post?: never;
         delete?: never;
@@ -330,7 +330,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/environments/{uuid}/inspection-observations/{observation_uuid}/reviews": {
+    "/api/v1/environments/{uuid}/evidence-records/{record_uuid}/reviews": {
         parameters: {
             query?: never;
             header?: never;
@@ -340,10 +340,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Review Inspection Observation
+         * Review Evidence Record
          * @description Append a review using optimistic concurrency; retries return the same revision.
          */
-        post: operations["src_app_api_inspections_review_inspection_observation"];
+        post: operations["src_app_api_evidence_review_evidence_record"];
         delete?: never;
         options?: never;
         head?: never;
@@ -520,8 +520,8 @@ export interface components {
             /** Annotations */
             annotations?: components["schemas"]["SampleAnnotation"][];
         };
-        /** ImportInspectionCampaignInput */
-        ImportInspectionCampaignInput: {
+        /** ImportEvidenceCollectionInput */
+        ImportEvidenceCollectionInput: {
             /** External Id */
             external_id: string;
             /** Name */
@@ -537,18 +537,18 @@ export interface components {
              * @default
              */
             limitations: string;
-            /** Observations */
-            observations: components["schemas"]["InspectionObservationInput"][];
+            /** Records */
+            records: components["schemas"]["EvidenceRecordInput"][];
         };
-        /** CreateInspectionReviewInput */
-        CreateInspectionReviewInput: {
+        /** CreateEvidenceReviewInput */
+        CreateEvidenceReviewInput: {
             /** Expected Revision */
             expected_revision: number;
             /** Idempotency Key */
             idempotency_key: string;
             /** Reason */
             reason: string;
-            assessment: components["schemas"]["InspectionAssessmentInput"];
+            assessment: components["schemas"]["EvidenceAssessmentInput"];
         };
         /**
          * TwinTelemetryQueryResponseSchema
@@ -852,8 +852,8 @@ export interface components {
             /** Next After */
             next_after: number | null;
         };
-        /** InspectionCampaignDetailSchema */
-        InspectionCampaignDetailSchema: {
+        /** EvidenceCollectionDetailSchema */
+        EvidenceCollectionDetailSchema: {
             /**
              * Uuid
              * Format: uuid
@@ -876,11 +876,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            /** Observations */
-            observations: components["schemas"]["InspectionObservationSchema"][];
+            /** Records */
+            records: components["schemas"]["EvidenceRecordSchema"][];
         };
-        /** InspectionReviewSchema */
-        InspectionReviewSchema: {
+        /** EvidenceReviewSchema */
+        EvidenceReviewSchema: {
             /**
              * Uuid
              * Format: uuid
@@ -888,7 +888,7 @@ export interface components {
             uuid: string;
             /** Revision */
             revision: number;
-            assessment: components["schemas"]["InspectionAssessmentInput"];
+            assessment: components["schemas"]["EvidenceAssessmentInput"];
             /** Reason */
             reason: string;
             /** Created By Uuid */
@@ -941,8 +941,8 @@ export interface components {
             progress?: components["schemas"]["WorkflowExecutionProgressSchema"] | null;
             pending_reason?: components["schemas"]["WorkflowExecutionPendingReasonSchema"] | null;
         };
-        /** InspectionCampaignSchema */
-        InspectionCampaignSchema: {
+        /** EvidenceCollectionSchema */
+        EvidenceCollectionSchema: {
             /**
              * Uuid
              * Format: uuid
@@ -966,26 +966,26 @@ export interface components {
              */
             created_at: string;
         };
-        /** InspectionObservationSchema */
-        InspectionObservationSchema: {
+        /** EvidenceRecordSchema */
+        EvidenceRecordSchema: {
             /**
              * Uuid
              * Format: uuid
              */
             uuid: string;
             /**
-             * Campaign Uuid
+             * Collection Uuid
              * Format: uuid
              */
-            campaign_uuid: string;
+            collection_uuid: string;
             /**
-             * Defect Uuid
+             * Subject Uuid
              * Format: uuid
              */
-            defect_uuid: string;
-            source: components["schemas"]["InspectionObservationInput"];
+            subject_uuid: string;
+            source: components["schemas"]["EvidenceRecordInput"];
             /** Reviews */
-            reviews: components["schemas"]["InspectionReviewSchema"][];
+            reviews: components["schemas"]["EvidenceReviewSchema"][];
         };
         /**
          * MissionSchema
@@ -1019,8 +1019,8 @@ export interface components {
              */
             updated_at: string;
         };
-        /** InspectionAssessmentInput */
-        InspectionAssessmentInput: {
+        /** EvidenceAssessmentInput */
+        EvidenceAssessmentInput: {
             /**
              * Decision
              * @enum {string}
@@ -1055,12 +1055,12 @@ export interface components {
             /** Polygon */
             polygon?: number[][] | null;
         };
-        /** InspectionObservationInput */
-        InspectionObservationInput: {
+        /** EvidenceRecordInput */
+        EvidenceRecordInput: {
             /** External Id */
             external_id: string;
-            /** Defect External Id */
-            defect_external_id: string;
+            /** Subject External Id */
+            subject_external_id: string;
             /** Kind */
             kind: string;
             /**
@@ -1079,8 +1079,8 @@ export interface components {
              * @default
              */
             limitation: string;
-            evidence?: components["schemas"]["InspectionEvidenceInput"] | null;
-            measurement?: components["schemas"]["InspectionMeasurementInput"] | null;
+            evidence?: components["schemas"]["EvidenceReferenceInput"] | null;
+            measurement?: components["schemas"]["EvidenceMeasurementInput"] | null;
             /** Model Version */
             model_version?: string | null;
             /** Model Run Reference */
@@ -1340,8 +1340,8 @@ export interface components {
             /** Label */
             label: string;
         };
-        /** InspectionEvidenceInput */
-        InspectionEvidenceInput: {
+        /** EvidenceReferenceInput */
+        EvidenceReferenceInput: {
             /** Reference */
             reference: string;
             /** Timestamp Us */
@@ -1349,8 +1349,8 @@ export interface components {
             /** Sha256 */
             sha256?: string | null;
         };
-        /** InspectionMeasurementInput */
-        InspectionMeasurementInput: {
+        /** EvidenceMeasurementInput */
+        EvidenceMeasurementInput: {
             /** Value */
             value: number;
             /**
@@ -1784,7 +1784,7 @@ export interface operations {
             };
         };
     };
-    src_app_api_inspections_list_inspection_campaigns: {
+    src_app_api_evidence_list_evidence_collections: {
         parameters: {
             query?: {
                 limit?: number;
@@ -1804,12 +1804,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InspectionCampaignSchema"][];
+                    "application/json": components["schemas"]["EvidenceCollectionSchema"][];
                 };
             };
         };
     };
-    src_app_api_inspections_import_inspection_campaign: {
+    src_app_api_evidence_import_evidence_collection: {
         parameters: {
             query?: never;
             header?: never;
@@ -1820,7 +1820,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ImportInspectionCampaignInput"];
+                "application/json": components["schemas"]["ImportEvidenceCollectionInput"];
             };
         };
         responses: {
@@ -1830,18 +1830,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InspectionCampaignDetailSchema"];
+                    "application/json": components["schemas"]["EvidenceCollectionDetailSchema"];
                 };
             };
         };
     };
-    src_app_api_inspections_get_inspection_campaign: {
+    src_app_api_evidence_get_evidence_collection: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 uuid: string;
-                campaign_uuid: string;
+                collection_uuid: string;
             };
             cookie?: never;
         };
@@ -1853,12 +1853,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InspectionCampaignDetailSchema"];
+                    "application/json": components["schemas"]["EvidenceCollectionDetailSchema"];
                 };
             };
         };
     };
-    src_app_api_inspections_get_inspection_defect_history: {
+    src_app_api_evidence_get_evidence_subject_history: {
         parameters: {
             query?: {
                 limit?: number;
@@ -1867,7 +1867,7 @@ export interface operations {
             header?: never;
             path: {
                 uuid: string;
-                defect_uuid: string;
+                subject_uuid: string;
             };
             cookie?: never;
         };
@@ -1879,24 +1879,24 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InspectionObservationSchema"][];
+                    "application/json": components["schemas"]["EvidenceRecordSchema"][];
                 };
             };
         };
     };
-    src_app_api_inspections_review_inspection_observation: {
+    src_app_api_evidence_review_evidence_record: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 uuid: string;
-                observation_uuid: string;
+                record_uuid: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateInspectionReviewInput"];
+                "application/json": components["schemas"]["CreateEvidenceReviewInput"];
             };
         };
         responses: {
@@ -1906,7 +1906,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InspectionReviewSchema"];
+                    "application/json": components["schemas"]["EvidenceReviewSchema"];
                 };
             };
         };

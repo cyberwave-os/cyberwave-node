@@ -14,13 +14,53 @@ These pages share the existing connection header. For example 19, select your AP
 | Site and equipment | Environment, twins, or your asset register | `MapLocation`, `EnvironmentBrowser` |
 | Planned work and execution | Configured workflow, triggers, WorkflowExecution and node outputs | Existing planner/monitor; map an output into `ActivityResult` |
 | Normal gauge/temperature/level checks | Workflow node output (`output_data`), source units and acquisition metadata | `ActivityResults`, `MeasurementCard` |
-| Persistent finding and assessment | Inspection campaign, observation, defect and review revisions | `InspectionCampaignBrowser`, `InspectionObservationList`, `InspectionObservationDetails` |
+| Persistent finding and assessment | EvidenceCollection, EvidenceSubject, EvidenceRecord and EvidenceReview, through `client.evidence` | `EvidenceCollectionBrowser`, `EvidenceRecordList`, `EvidenceRecordDetails` |
 | Images, audio and video | Authorized media service, Attachment, recording or Dataset sample | `EvidencePreview`, `RecordingPlaybackPanel` |
 | Work orders and acceptance | Your maintenance system and its authenticated callbacks | Host-owned status and links; existing verification component |
 
 `ActivityResult` and `MapLocation` are display types, not new backend tables. Adapt the output of the selected workflow node or your existing asset system. There is no universal gauge-result schema: keep the source reference, timestamp, method, unit, assessment and limitations. The components display the supplied assessment; they do not infer a safe operating condition from a number. Normal readings do not need to become persistent defects.
 
 Completion of a workflow does not prove that every measurement was acquired. Work-order completion does not verify technical resolution. A finding outside delivered coverage is not a resolved finding. Keep these distinctions when composing the components.
+
+## What the evidence records represent
+
+The preview backend persists four generic concepts for history that must outlive a workflow run:
+
+| Storage concept | Purpose | Inspection example label |
+| --- | --- | --- |
+| `EvidenceCollection` | Immutable import in an environment, with asset/reference version and coverage context. | Campaign |
+| `EvidenceSubject` | Stable external identity tracked across collections; it need not be a defect or a Twin. | Defect |
+| `EvidenceRecord` | Source data about that subject in one collection, including measurements and media references. | Observation |
+| `EvidenceReview` | Append-only assessment, authenticated author, reason and revision. | Review |
+
+For example, two visits produce two collections and two records referring to the same subject. A reviewer can revise their assessment without overwriting either source record. The evidence API validates coverage, severity and resolution rules. Use `client.evidence.list/get/importCollection/history/review` and the matching `EvidenceCollectionBrowser`, `useEvidenceCollection`, `EvidenceRecordList`, `EvidenceRecordDetails` and `EvidenceVerificationPanel` components. Inspection terminology belongs to the example application. The first typed payload still describes measured findings and condition reviews; generic naming does not make it an arbitrary-schema store.
+
+Use workflow outputs for ordinary activity results and `DatasetSample` for training images and current labels. Those flows do not require these four models. Media stays in Attachments, recordings or the source provider; these records contain references, not a second copy of the media. The connected workbench, maintenance verification and atlas examples use this persistence; the asset-operations example remains a local display fixture.
+
+## API and SDK names
+
+All routes are scoped to `/api/v1/environments/{uuid}`:
+
+| Operation | Route | SDK helper |
+| --- | --- | --- |
+| Browse/import collections | `GET/POST /evidence-collections` | `evidence.list`, `evidence.importCollection` |
+| Load a collection and its records | `GET /evidence-collections/{collection_uuid}` | `evidence.get` |
+| History for the same subject | `GET /evidence-subjects/{subject_uuid}/records` | `evidence.history` |
+| Append an assessment revision | `POST /evidence-records/{record_uuid}/reviews` | `evidence.review` |
+
+An import contains `records`, each with a `subject_external_id`. Returned records contain `collection_uuid` and `subject_uuid`. Review requests preserve the expected revision, idempotency key and reason. Reads accept cancellation and list/history pagination. This is an unreleased rename: upgrade the preview backend and SDK together; the previous `client.inspections`, inspection routes and component names are replaced, without compatibility aliases.
+
+```ts
+const collections = await client.evidence.list(environmentId, { limit: 10 });
+if (collections[0]) {
+  const collection = await client.evidence.get(environmentId, collections[0].uuid);
+  const record = collection.records[0];
+  if (record) {
+    const history = await client.evidence.history(environmentId, record.subject_uuid);
+    // Render source records alongside their append-only review history.
+  }
+}
+```
 
 ## Compose a result detail
 
@@ -86,9 +126,9 @@ Update an anchor using the existing dedicated `PATCH /api/v1/environments/{uuid}
 
 ## Browse inspection history and recordings
 
-Wrap the connected components in `CyberwaveProvider`. `InspectionCampaignBrowser` pages campaigns for an `environmentId`; `useInspectionCampaign(environmentId, campaignId)` loads the selected detail with cancellation. Compose `InspectionObservationList` and `InspectionObservationDetails` with host-owned selection. Reset campaign and observation IDs when changing environment or account; the resource hooks discard stale responses and the browsers reset pagination when their client/resource changes.
+Wrap the connected components in `CyberwaveProvider`. `EvidenceCollectionBrowser` pages campaigns for an `environmentId`; `useEvidenceCollection(environmentId, campaignId)` loads the selected detail with cancellation. Compose `EvidenceRecordList` and `EvidenceRecordDetails` with host-owned selection. Reset campaign and observation IDs when changing environment or account; the resource hooks discard stale responses and the browsers reset pagination when their client/resource changes.
 
-Observation details keep source evidence separate from the latest review (ordered by revision), show uncertainty, model provenance and review history, and preserve missing coverage. For mutation/reconciliation reuse the existing `InspectionVerificationPanel` and [maintenance examples](../examples/developer-console/MAINTENANCE.md).
+Observation details keep source evidence separate from the latest review (ordered by revision), show uncertainty, model provenance and review history, and preserve missing coverage. For mutation/reconciliation reuse the existing `EvidenceVerificationPanel` and [maintenance examples](../examples/developer-console/MAINTENANCE.md).
 
 `RecordingPlaybackPanel` combines the existing playback hook, finalized-track parser and `RecordingVideo`. Pair it with `RecordingBrowser` and supply `environmentUuid`, `recording`, and optionally a synchronous `resolveUrl` for your authorized media proxy. It handles HTTP 202 materialization, track selection, source refresh, media errors and missing MP4 tracks. Changing API, environment, recording or URL resolver removes old media. Keep the resolver stable.
 

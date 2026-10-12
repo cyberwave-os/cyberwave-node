@@ -17,8 +17,8 @@ const extensionSource = process.argv.find(arg => arg.startsWith('--extensions-fr
 if (extensionSource && schemaSource && extensionSource !== schemaSource) throw new Error('Use the same backend document for both contracts');
 if (extensionSource || localSchema) {
   const full = localSchema ?? validateSchema(JSON.parse(await readFile(extensionSource, 'utf8')));
-  const paths = Object.fromEntries(Object.entries(full.paths).filter(([path]) => /\/environments\/\{uuid\}\/(inspection-|missions$)/.test(path) || /\/workspaces\/\{workspace_uuid\}\/missions$/.test(path) || /\/workflows(?:$|\/\{uuid\}\/(?:input-contract|executions)$)/.test(path) || /\/workflow-actions(?:$|\/\{uuid\}(?:$|\/respond$))/.test(path) || /\/mlmodels\/structured-actions$/.test(path) || /\/twins\/\{uuid\}\/(?:telemetry$|video-sessions(?:$|\/\{session_id\}\/close$))/.test(path) || /\/datasets\/(?:collections$|\{uuid\}\/samples(?:$|\/\{sample_uuid\}\/review$))/.test(path)));
-  if (Object.keys(paths).length !== 19) throw new Error('Expected inspection, workflow, human action, dataset sample and sensor contracts');
+  const paths = Object.fromEntries(Object.entries(full.paths).filter(([path]) => /\/environments\/\{uuid\}\/(evidence-|missions$)/.test(path) || /\/workspaces\/\{workspace_uuid\}\/missions$/.test(path) || /\/workflows(?:$|\/\{uuid\}\/(?:input-contract|executions)$)/.test(path) || /\/workflow-actions(?:$|\/\{uuid\}(?:$|\/respond$))/.test(path) || /\/mlmodels\/structured-actions$/.test(path) || /\/twins\/\{uuid\}\/(?:telemetry$|video-sessions(?:$|\/\{session_id\}\/close$))/.test(path) || /\/datasets\/(?:collections$|\{uuid\}\/samples(?:$|\/\{sample_uuid\}\/review$))/.test(path)));
+  if (Object.keys(paths).length !== 19) throw new Error('Expected evidence, workflow, human action, dataset sample and sensor contracts');
   const schemas = {}, queue = [paths];
   while (queue.length) {
     const node = queue.shift();

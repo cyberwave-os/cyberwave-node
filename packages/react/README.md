@@ -40,9 +40,9 @@ The main React entry does not load the optional map or annotation editor. GIS se
 | `WorkflowCatalog` | Client prop | Environment or workspace scope; catalog, template selection, planner and monitor. `readOnly` defaults true. |
 | `WorkflowPlanner` | Client prop | Selected workflow and scope, configuration callbacks; explicit edits, scheduling and runs. `readOnly` defaults true. |
 | `WorkflowMonitor` | Client prop | Workflow history, selected run and backend status; cancellation only when editing is enabled. |
-| `InspectionCampaignBrowser` / `useInspectionCampaign` | Provider | Environment and campaign selection; paginated list and cancellable detail. |
-| `InspectionObservationList`, `InspectionObservationDetails` | Display | Campaign or observation; selection, source evidence, uncertainty and revisioned review. Details accept children for application actions/media. |
-| `InspectionVerificationPanel` | Client prop | Environment/defect, baseline review, severity/priority; evidence-backed review. `readOnly` defaults true. |
+| `EvidenceCollectionBrowser` / `useEvidenceCollection` | Provider | Environment and collection selection; paginated list and cancellable detail. |
+| `EvidenceRecordList`, `EvidenceRecordDetails` | Display | `collection` or `record`; selection, source evidence, uncertainty and revisioned review. Details accept children for application actions/media. |
+| `EvidenceVerificationPanel` | Client prop | Environment/subject, baseline review, severity/priority; evidence-backed review. `readOnly` defaults true. |
 | `ActivityResults`, `MeasurementCard` | Display | Host-provided `ActivityResult` projections, controlled selection and detail children. No result persistence or threshold inference. |
 | `EvidencePreview` | Display | Authorized `src`, kind, caption and unavailable reason; native image/video/audio. Opaque IDs need a host resolver. |
 | `LocationMap` | Display + Cesium | Stable `locations`, `selectedId`, `onSelect`, optional stable imagery factory. Read-only site markers and accessible buttons. |

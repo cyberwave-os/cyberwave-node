@@ -1,35 +1,35 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
-import type { InspectionCampaign, CyberwaveClient } from "cyberwave";
+import type { EvidenceCollection, CyberwaveClient } from "cyberwave";
 import { useCyberwave } from "./index.js";
 import { useResource, useResourceKey } from "./resource.js";
-export type InspectionObservation = InspectionCampaign["observations"][number];
-type CampaignSummary = Awaited<
-  ReturnType<CyberwaveClient["inspections"]["list"]>
+export type EvidenceRecord = EvidenceCollection["records"][number];
+type CollectionSummary = Awaited<
+  ReturnType<CyberwaveClient["evidence"]["list"]>
 >[number];
-export function InspectionCampaignBrowser(props: {
+export function EvidenceCollectionBrowser(props: {
   environmentId: string;
   selectedId?: string;
-  onSelect: (campaign: CampaignSummary) => void;
+  onSelect: (collection: CollectionSummary) => void;
 }) {
   return (
-    <Campaigns
+    <Collections
       key={useResourceKey(useCyberwave(), props.environmentId)}
       {...props}
     />
   );
 }
-function Campaigns({
+function Collections({
   environmentId,
   selectedId,
   onSelect,
-}: Parameters<typeof InspectionCampaignBrowser>[0]) {
+}: Parameters<typeof EvidenceCollectionBrowser>[0]) {
   const client = useCyberwave(),
     [page, setPage] = useState(0);
   const state = useResource(
     useMemo(
       () => (signal: AbortSignal) =>
-        client.inspections.list(
+        client.evidence.list(
           environmentId,
           { limit: 10, offset: page * 10 },
           { signal },
@@ -38,9 +38,9 @@ function Campaigns({
     ),
   );
   return (
-    <section className="cw-browser" aria-label="Inspection campaigns">
-      <h3>Inspection campaigns</h3>
-      {state.loading && <p role="status">Loading campaigns…</p>}
+    <section className="cw-browser" aria-label="Evidence collections">
+      <h3>Evidence collections</h3>
+      {state.loading && <p role="status">Loading collections…</p>}
       {state.error && (
         <p role="alert" className="cw-error">
           {state.error.message}
@@ -67,7 +67,7 @@ function Campaigns({
           </button>
         ))}
       </div>
-      {state.data?.length === 0 && <p>No stored campaigns in this page.</p>}
+      {state.data?.length === 0 && <p>No stored collections in this page.</p>}
       <div className="cw-pagination">
         <button
           type="button"
@@ -75,7 +75,7 @@ function Campaigns({
           disabled={state.loading || !page}
           onClick={() => setPage(page - 1)}
         >
-          Previous campaigns
+          Previous collections
         </button>
         <span>Page {page + 1}</span>
         <button
@@ -84,47 +84,47 @@ function Campaigns({
           disabled={state.loading || !state.data || state.data.length < 10}
           onClick={() => setPage(page + 1)}
         >
-          Next campaigns
+          Next collections
         </button>
       </div>
     </section>
   );
 }
-export function useInspectionCampaign(
+export function useEvidenceCollection(
   environmentId: string,
-  campaignId?: string,
+  collectionId?: string,
 ) {
   const client = useCyberwave();
   return useResource(
     useMemo(
       () => (signal: AbortSignal) =>
-        campaignId
-          ? client.inspections.get(environmentId, campaignId, { signal })
+        collectionId
+          ? client.evidence.get(environmentId, collectionId, { signal })
           : Promise.resolve(undefined),
-      [client, environmentId, campaignId],
+      [client, environmentId, collectionId],
     ),
   );
 }
-export function InspectionObservationList({
-  campaign,
+export function EvidenceRecordList({
+  collection,
   selectedId,
   onSelect,
 }: {
-  campaign: InspectionCampaign;
+  collection: EvidenceCollection;
   selectedId?: string;
-  onSelect: (item: InspectionObservation) => void;
+  onSelect: (item: EvidenceRecord) => void;
 }) {
   return (
-    <section className="cw-browser" aria-label="Inspection observations">
-      <h3>Observations · {campaign.observations.length}</h3>
+    <section className="cw-browser" aria-label="Evidence records">
+      <h3>Records · {collection.records.length}</h3>
       <p>
-        {campaign.coverage == null
+        {collection.coverage == null
           ? "Coverage unknown"
-          : `${Math.round(campaign.coverage * 100)}% coverage`}{" "}
-        · {campaign.limitations || "No limitations supplied"}
+          : `${Math.round(collection.coverage * 100)}% coverage`}{" "}
+        · {collection.limitations || "No limitations supplied"}
       </p>
       <div className="cw-resource-list">
-        {campaign.observations.map((o) => (
+        {collection.records.map((o) => (
           <button
             type="button"
             key={o.uuid}
@@ -144,23 +144,23 @@ export function InspectionObservationList({
           </button>
         ))}
       </div>
-      {!campaign.observations.length && <p>No observations supplied.</p>}
+      {!collection.records.length && <p>No records supplied.</p>}
     </section>
   );
 }
-export function InspectionObservationDetails({
-  observation,
+export function EvidenceRecordDetails({
+  record,
   children,
 }: {
-  observation: InspectionObservation;
+  record: EvidenceRecord;
   children?: ReactNode;
 }) {
-  const source = observation.source,
-    latest = [...observation.reviews].sort(
+  const source = record.source,
+    latest = [...record.reviews].sort(
       (a, b) => b.revision - a.revision,
     )[0];
   return (
-    <section className="cw-browser" aria-label="Observation details">
+    <section className="cw-browser" aria-label="Evidence record details">
       <h3>{source.kind}</h3>
       <p>
         {source.observed
@@ -180,7 +180,7 @@ export function InspectionObservationDetails({
         </dd>
         <dt>Severity</dt>
         <dd>{latest?.assessment.severity ?? "Not assessed"}</dd>
-        <dt>Maintenance priority</dt>
+        <dt>Priority</dt>
         <dd>{latest?.assessment.priority ?? "Not assigned"}</dd>
         <dt>Evidence reference</dt>
         <dd>{source.evidence?.reference ?? "Unavailable"}</dd>
@@ -203,8 +203,8 @@ export function InspectionObservationDetails({
       )}
       {children}
       <details>
-        <summary>Review history · {observation.reviews.length}</summary>
-        {[...observation.reviews]
+        <summary>Review history · {record.reviews.length}</summary>
+        {[...record.reviews]
           .sort((a, b) => b.revision - a.revision)
           .map((r) => (
             <article key={r.uuid}>

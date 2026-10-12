@@ -35,7 +35,7 @@ export const examples: Example[] = [
     actions:
       "Read-only campaign/review/recording browsing; media references need a host resolver.",
     reuse:
-      "EnvironmentBrowser, InspectionCampaignBrowser, InspectionObservationDetails, RecordingPlaybackPanel",
+      "EnvironmentBrowser, EvidenceCollectionBrowser, EvidenceRecordDetails, RecordingPlaybackPanel",
   },
   {
     id: 16,
@@ -203,7 +203,7 @@ export const examples: Example[] = [
       "Local proposal needs no private data. Stored findings/workflow planning need an authorized environment.",
     actions:
       "JSON export is local. The embedded planner can change/run workflows independently; no work order or reservation is submitted.",
-    reuse: "InspectionCampaignBrowser, useInspectionCampaign, WorkflowCatalog",
+    reuse: "EvidenceCollectionBrowser, useEvidenceCollection, WorkflowCatalog",
   },
   {
     id: 13,
@@ -216,7 +216,7 @@ export const examples: Example[] = [
       "Local walkthrough or stored baseline/follow-up evidence on the preview backend.",
     actions:
       "Local acceptance exercise; explicit stored review/import and workflow actions can write to the authenticated local API.",
-    reuse: "InspectionVerificationPanel, workflow components",
+    reuse: "EvidenceVerificationPanel, workflow components",
   },
   {
     id: 8,

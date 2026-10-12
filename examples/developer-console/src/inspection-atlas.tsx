@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   EnvironmentBrowser,
-  InspectionCampaignBrowser,
-  useInspectionCampaign,
-  InspectionObservationList,
-  InspectionObservationDetails,
+  EvidenceCollectionBrowser,
+  useEvidenceCollection,
+  EvidenceRecordList,
+  EvidenceRecordDetails,
   EvidencePreview,
   RecordingBrowser,
   RecordingPlaybackPanel,
@@ -49,13 +49,13 @@ function SupportingRecordings({ environmentId }: { environmentId: string }) {
 function Site({ environment }: { environment: Environment }) {
   const [campaignId, setCampaign] = useState(""),
     [observationId, setObservation] = useState("");
-  const state = useInspectionCampaign(environment.uuid, campaignId),
+  const state = useEvidenceCollection(environment.uuid, campaignId),
     campaign = state.data;
   const locations = useMemo(() => {
     const p = environmentMapLocation(environment);
     return p ? [p] : [];
   }, [environment]);
-  const observation = campaign?.observations.find(
+  const observation = campaign?.records.find(
     (o) => o.uuid === observationId,
   );
   return (
@@ -63,7 +63,7 @@ function Site({ environment }: { environment: Environment }) {
       <div className="gis-grid">
         <aside className="panel">
           <h2>{environment.name}</h2>
-          <InspectionCampaignBrowser
+          <EvidenceCollectionBrowser
             environmentId={environment.uuid}
             selectedId={campaignId}
             onSelect={(c) => {
@@ -93,13 +93,13 @@ function Site({ environment }: { environment: Environment }) {
       )}
       {campaign && (
         <div className="gis-results panel section-gap">
-          <InspectionObservationList
-            campaign={campaign}
+          <EvidenceRecordList
+            collection={campaign}
             selectedId={observationId}
             onSelect={(o) => setObservation(o.uuid)}
           />
           {observation ? (
-            <InspectionObservationDetails observation={observation}>
+            <EvidenceRecordDetails record={observation}>
               <EvidencePreview
                 caption={`Evidence reference: ${observation.source.evidence?.reference ?? "unavailable"}`}
                 unavailableReason="Resolve this reference through your authorized media service. A reference is not automatically a playable URL."
@@ -108,7 +108,7 @@ function Site({ environment }: { environment: Environment }) {
                 key={observation.uuid}
                 environmentId={environment.uuid}
               />
-            </InspectionObservationDetails>
+            </EvidenceRecordDetails>
           ) : (
             <div>
               <h3>{campaign.name}</h3>

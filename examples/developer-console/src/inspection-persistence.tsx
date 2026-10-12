@@ -4,8 +4,8 @@ import {
   CyberwaveError,
   type CyberwaveClient,
   type Environment,
-  type InspectionCampaign,
-  type InspectionManifest,
+  type EvidenceCollection,
+  type EvidenceManifest,
 } from "cyberwave";
 import { ConnectedWorkbench } from "./workbench-connection.tsx";
 import { demoFindings, type Finding } from "./inspection-domain.ts";
@@ -13,7 +13,7 @@ import { demoFindings, type Finding } from "./inspection-domain.ts";
 export function sampleManifest(
   index: number,
   prefix: string,
-): InspectionManifest {
+): EvidenceManifest {
   return {
     external_id: `${prefix}-${index}`,
     name: `Synthetic culvert · ${index ? "Follow-up" : "Baseline"}`,
@@ -23,11 +23,11 @@ export function sampleManifest(
     limitations: index
       ? "Coverage unavailable from 408–600 m"
       : "Synthetic demonstration, not real inspection evidence",
-    observations: demoFindings.map((f) => {
+    records: demoFindings.map((f) => {
       const o = f.observations[index];
       return {
         external_id: `${f.id}-${index}`,
-        defect_external_id: `${prefix}-${f.id}`,
+        subject_external_id: `${prefix}-${f.id}`,
         kind: f.name,
         observed: o.observed,
         chainage_m: f.chainageM,
@@ -65,9 +65,9 @@ function Persistence({
 }) {
   const [environment, setEnvironment] = useState<Environment>(),
     [campaigns, setCampaigns] = useState<
-      Awaited<ReturnType<CyberwaveClient["inspections"]["list"]>>
+      Awaited<ReturnType<CyberwaveClient["evidence"]["list"]>>
     >([]),
-    [campaign, setCampaign] = useState<InspectionCampaign>(),
+    [campaign, setCampaign] = useState<EvidenceCollection>(),
     [prefix, setPrefix] = useState("sdk-inspection-demo-v1"),
     [reason, setReason] = useState(""),
     [status, setStatus] = useState(
@@ -77,14 +77,14 @@ function Persistence({
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(
     new URL(client.baseUrl).hostname,
   );
-  const observation = campaign?.observations.find((o) =>
-    o.source.defect_external_id.endsWith(`-${finding.id}`),
+  const observation = campaign?.records.find((o) =>
+    o.source.subject_external_id.endsWith(`-${finding.id}`),
   );
   const latest = observation?.reviews.at(-1);
   function failure(e: unknown) {
     setStatus(
       e instanceof CyberwaveError && e.status === 404
-        ? "Inspection API unavailable on this backend. Use the development branch to test persistence."
+        ? "Evidence API unavailable on this backend. Use the development branch to test persistence."
         : (e as Error).message,
     );
   }
@@ -93,7 +93,7 @@ function Persistence({
     setCampaigns([]);
     if (!environment) return;
     const abort = new AbortController();
-    client.inspections
+    client.evidence
       .list(environment.uuid, {}, { signal: abort.signal })
       .then((rows) => {
         if (!abort.signal.aborted) {
@@ -111,13 +111,13 @@ function Persistence({
     setBusy(true);
     try {
       for (const index of [0, 1]) {
-        const saved = await client.inspections.importCampaign(
+        const saved = await client.evidence.importCollection(
           environment.uuid,
           sampleManifest(index, prefix),
         );
         setCampaign(saved);
       }
-      setCampaigns(await client.inspections.list(environment.uuid));
+      setCampaigns(await client.evidence.list(environment.uuid));
       setStatus(
         "Two synthetic campaign manifests persisted. Repeating this import returns the same records.",
       );
@@ -131,7 +131,7 @@ function Persistence({
     if (!environment || !uuid) return;
     setBusy(true);
     try {
-      setCampaign(await client.inspections.get(environment.uuid, uuid));
+      setCampaign(await client.evidence.get(environment.uuid, uuid));
       setStatus("Loaded stored source observations and review history.");
     } catch (e) {
       failure(e);
@@ -151,7 +151,7 @@ function Persistence({
     }
     setBusy(true);
     try {
-      await client.inspections.review(environment.uuid, observation.uuid, {
+      await client.evidence.review(environment.uuid, observation.uuid, {
         expected_revision: latest?.revision || 0,
         idempotency_key: crypto.randomUUID(),
         reason,
@@ -166,7 +166,7 @@ function Persistence({
         },
       });
       setCampaign(
-        await client.inspections.get(environment.uuid, campaign.uuid),
+        await client.evidence.get(environment.uuid, campaign.uuid),
       );
       setReason("");
       setStatus(

@@ -10,7 +10,7 @@ import {
   verificationDecision,
   type Verification,
 } from "../src/maintenance-domain.ts";
-import type { InspectionCampaign } from "cyberwave";
+import type { EvidenceCollection } from "cyberwave";
 const proposal = {
   ...initialProposal("request-1"),
   partsReady: true,
@@ -98,10 +98,10 @@ test("campaign projection uses the latest review, never superseded validation or
   const campaign = {
     uuid: "campaign",
     asset_reference: "asset",
-    observations: [
+    records: [
       {
         uuid: "observation",
-        defect_uuid: "defect",
+        subject_uuid: "defect",
         source: {
           observed: true,
           evidence: { reference: "video" },
@@ -110,9 +110,9 @@ test("campaign projection uses the latest review, never superseded validation or
         reviews: [rejected, validated],
       },
     ],
-  } as unknown as InspectionCampaign;
+  } as unknown as EvidenceCollection;
   assert.deepEqual(validatedFindings("env", campaign), []);
-  campaign.observations[0].reviews = [validated as any];
+  campaign.records[0].reviews = [validated as any];
   const [finding] = validatedFindings("env", campaign);
   assert.equal(finding.reviewId, "review1");
   assert.equal(finding.evidenceReference, "video");
@@ -120,10 +120,10 @@ test("campaign projection uses the latest review, never superseded validation or
     planningIssues({ ...proposal, finding }).join(" "),
     /asset reference/,
   );
-  campaign.observations[0].source.observed = false;
+  campaign.records[0].source.observed = false;
   assert.deepEqual(validatedFindings("env", campaign), []);
-  campaign.observations[0].source.observed = true;
-  campaign.observations[0].source.evidence = null;
+  campaign.records[0].source.observed = true;
+  campaign.records[0].source.evidence = null;
   assert.deepEqual(validatedFindings("env", campaign), []);
 });
 test("work-order replays are idempotent; conflicting, stale and unrelated updates cannot overwrite state", () => {
